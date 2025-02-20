@@ -1,0 +1,44 @@
+[package]
+name = "solana-verifier"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "solana_verifier"
+crate-type = ["cdylib", "lib"]
+rust-version = "1.84.0"
+
+[features]
+default = []
+custom-heap = []
+
+
+[dependencies]
+bincode = "1.3.3"
+bytemuck = "1.21.0"
+serde = { version = "1.0.217", features = ["derive"] }
+solana-program = { git = "https://github.com/Okm165/solana.git", branch = "fix/deps" }
+swiftness_air = { git = "https://github.com/matzayonc/swiftness.git", branch = "solana", default-features = false, features = [
+    "recursive",
+    "keccak_160_lsb",
+    "stone6",
+] }
+swiftness_stark = { git = "https://github.com/matzayonc/swiftness.git", branch = "solana", default-features = false, features = [
+    "recursive",
+    "keccak_160_lsb",
+    "stone6",
+] }
+
+[dev-dependencies]
+swiftness_proof_parser = { git = "https://github.com/matzayonc/swiftness.git", branch = "solana", default-features = false }
+swiftness = { git = "https://github.com/matzayonc/swiftness.git", branch = "solana", default-features = false, features = [
+    "recursive",
+    "keccak_160_lsb",
+    "stone6",
+] }
+solana-rpc-client = "2.0.9"
+solana-rpc-client-api = "2.0.9"
+solana-sdk = { version = "2.0.9", features = ["borsh"] }
+tokio = "1.40.0"
+futures = "0.3.30"
+serde_yaml = "0.9.34"
