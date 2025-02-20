@@ -70,7 +70,8 @@ pub fn process_instruction_data(
         stage = VerificationStage::Verify;
     }
 
-    stage = process_instruction(instruction, &mut account_data[1..], stage)?;
+    // Skipping the first byte as stage, and 7 as padding to get the correct alignment.
+    stage = process_instruction(instruction, &mut account_data[8..], stage)?;
     account_data[0] = stage as u8;
 
     Ok(())
@@ -141,9 +142,12 @@ mod tests {
         let mut proof_account: ProofAccount = read_proof();
         let proof_account_memory = bytemuck::bytes_of_mut(&mut proof_account);
 
+        let mut account_data = proof_account_memory.to_vec();
+        account_data.insert(0, 0);
+
         let res = process_instruction(
             Entrypoint::VerifyProof {},
-            proof_account_memory,
+            &mut account_data[1..],
             VerificationStage::Verify,
         );
 

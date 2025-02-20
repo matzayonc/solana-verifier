@@ -31,7 +31,6 @@ async fn send_transactions(
     let mut results = Vec::new();
 
     while let Some(res) = futures.next().await {
-        println!("{:?}", res);
         results.push(res.1)
     }
 
@@ -89,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(std::env::var("HOME").unwrap()).join(".config/solana/cli/config.yml");
 
     let config: SolanaConfig = serde_yaml::from_reader(std::fs::File::open(config)?)?;
-    let client = RpcClient::new(config.json_rpc_url);
+    let client = RpcClient::new(config.json_rpc_url.clone());
     let payer = Keypair::read_from_file(config.keypair_path)?;
 
     println!("Using keypair {}, at {}", payer.pubkey(), client.url());
@@ -114,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &client,
                 &payer,
                 &proof_data_account,
-                stark_proof.len() + 1, // +1 for the `stage`
+                stark_proof.len() + 8, // +1 for the `stage` and 7 as padding
                 &program_id,
             )
             .await?,
@@ -138,41 +137,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .collect::<Vec<_>>();
 
-    for instructions in instructions.chunks(50) {
-        loop {
-            let blockhash = client
-                .get_latest_blockhash()
-                .await
-                .expect("failed to connect to rpc");
+    println!("Prepared instructions");
 
-            // Create corresponding transactions
-            let transactions = instructions
-                .iter()
-                .map(|instruction| {
-                    Transaction::new_signed_with_payer(
-                        &[instruction.clone()],
-                        Some(&payer.pubkey()),
-                        &[&payer],
-                        blockhash,
-                    )
-                })
-                .collect::<Vec<_>>();
+    let mut handles = Vec::new();
+    for instructions in instructions.chunks(10) {
+        let instructions = instructions.to_vec();
+        let client = RpcClient::new(config.json_rpc_url.clone());
+        let payer = Keypair::from_bytes(&payer.to_bytes()).unwrap();
 
-            let results = send_transactions(&client, &transactions).await;
-            if results.iter().all(|r| r.is_ok()) {
-                break;
+        handles.push(tokio::spawn(async move {
+            loop {
+                let blockhash = client
+                    .get_latest_blockhash()
+                    .await
+                    .expect("failed to connect to rpc");
+
+                // Create corresponding transactions
+                let transactions = instructions
+                    .iter()
+                    .map(|instruction| {
+                        Transaction::new_signed_with_payer(
+                            &[instruction.clone()],
+                            Some(&payer.pubkey()),
+                            &[&payer],
+                            blockhash,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                let results = send_transactions(&client, &transactions).await;
+                if results.iter().all(|r| r.is_ok()) {
+                    break;
+                }
+
+                println!("Failed to send transactions, repeating batch.");
             }
-
-            println!("Failed to send transactions, repeating batch.");
-        }
+        }));
     }
+
+    for handle in handles {
+        handle.await?;
+    }
+
+    println!("Sent publish instructions");
 
     loop {
         let data = client
             .get_account_data(&proof_data_account.pubkey())
             .await?;
 
-        if data[1..].eq(stark_proof) {
+        if data[8..].eq(stark_proof) {
             println!("proof_data_account correct!");
             break;
         } else {
