@@ -2,6 +2,7 @@ use solana_program::program_error::ProgramError;
 pub use swiftness_stark::types::{Cache, Felt, StarkProof};
 
 use crate::verify::stark_verify::StarkVerifyTask;
+use crate::verify::verify_output::VerifyOutputTask;
 use crate::{intermediate::Intermediate, verify::VerifyProofTask};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -10,6 +11,7 @@ pub enum Tasks {
     #[default]
     VerifyProofWithoutStark = 1,
     StarkVerify = 2,
+    VerifyOutput = 3,
 }
 
 pub type TaskResult = Result<Vec<Tasks>, ()>;
@@ -30,6 +32,7 @@ impl Tasks {
                 Box::new(VerifyProofTask::view(proof, cache, intermediate))
             }
             Tasks::StarkVerify => Box::new(StarkVerifyTask::view(proof, cache, intermediate)),
+            Tasks::VerifyOutput => Box::new(VerifyOutputTask::view(proof, cache, intermediate)),
         }
     }
 }
@@ -41,6 +44,7 @@ impl TryFrom<u8> for Tasks {
         Ok(match value {
             1 => Tasks::VerifyProofWithoutStark,
             2 => Tasks::StarkVerify,
+            3 => Tasks::VerifyOutput,
             _ => return Err(ProgramError::Custom(2)),
         })
     }

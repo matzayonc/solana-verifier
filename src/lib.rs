@@ -104,10 +104,7 @@ pub fn process_instruction<'a>(
                 bytemuck::from_bytes_mut::<ProofAccount>(account_data);
 
             schedule.flush();
-            schedule.push_slice(&[
-                Tasks::VerifyProofWithoutStark as u8,
-                Tasks::StarkVerify as u8,
-            ]);
+            schedule.push(Tasks::VerifyProofWithoutStark as u8);
 
             msg!("Schedule");
 
@@ -137,13 +134,13 @@ pub fn process_instruction<'a>(
 
             schedule.push_slice(&children.iter().map(|c| *c as u8).collect::<Vec<_>>());
 
-            return Err(ProgramError::Custom(42));
+            // return Err(ProgramError::Custom(42));
 
-            // if schedule.finished() {
-            //     VerificationStage::Verified
-            // } else {
-            //     VerificationStage::Verify
-            // }
+            if schedule.finished() {
+                VerificationStage::Verified
+            } else {
+                VerificationStage::Verify
+            }
         }
     };
 
@@ -175,28 +172,29 @@ mod tests {
     #[test]
     fn test_deserialize_proof() {
         let mut proof_account: ProofAccount = read_proof();
-        let proof_account_memory = bytemuck::bytes_of_mut(&mut proof_account);
+        let account_data = bytemuck::bytes_of_mut(&mut proof_account);
 
-        let mut account_data = proof_account_memory.to_vec();
-        account_data.insert(0, 0);
+        let mut stage = VerificationStage::Publish;
 
-        let res = process_instruction(
-            Entrypoint::VerifyProof {},
-            &mut account_data[1..],
-            VerificationStage::Verify,
+        stage = process_instruction(Entrypoint::Schedule, account_data, stage).unwrap();
+        let mut c = 0;
+
+        while stage != VerificationStage::Verified {
+            stage = process_instruction(Entrypoint::VerifyProof, account_data, stage).unwrap();
+            c += 1;
+        }
+
+        assert_eq!(c, 3);
+
+        let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
+
+        assert_eq!(
+            intermediate.program_hash().to_string(),
+            "1134405407503728996667931466883426118808998438966777289406309056327695405399"
         );
-
-        assert_eq!(res, Err(ProgramError::Custom(42)));
-
-        // let output = output
-        //     .into_iter()
-        //     .map(|v| v.to_string())
-        //     .collect::<Vec<_>>();
-
-        // assert_eq!(
-        //     program_hash.to_string(),
-        //     "1134405407503728996667931466883426118808998438966777289406309056327695405399"
-        // );
-        // assert_eq!(output, vec!["0", "1", "5"]);
+        assert_eq!(
+            intermediate.output(),
+            &[Felt::from(0), Felt::from(1), Felt::from(5)]
+        );
     }
 }

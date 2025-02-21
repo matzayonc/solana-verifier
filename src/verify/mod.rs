@@ -1,5 +1,5 @@
 pub mod stark_verify;
-
+pub mod verify_output;
 use swiftness::{commit::stark_commit, queries::generate_queries, stark::Error};
 use swiftness_air::{
     Transcript,
@@ -101,7 +101,7 @@ impl<'a> Task for VerifyProofTask<'a> {
         // Moves queries to the cache to free up memory.
         // queries = self.cache.verify.queries.move_to(queries);
 
-        Ok(vec![Tasks::StarkVerify])
+        Ok(vec![Tasks::StarkVerify, Tasks::VerifyOutput])
     }
 }
 
