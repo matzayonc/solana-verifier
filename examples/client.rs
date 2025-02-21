@@ -1,4 +1,4 @@
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::{StreamExt, stream::FuturesUnordered};
 use serde::Deserialize;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -9,9 +9,12 @@ use solana_sdk::{
     system_instruction,
     transaction::Transaction,
 };
-use solana_verifier::{stack::Schedule, task::Task, Cache, Entrypoint, ProofAccount, PROGRAM_ID};
+use solana_verifier::{
+    Cache, Entrypoint, PROGRAM_ID, ProofAccount, intermediate::Intermediate, stack::Schedule,
+    task::Task,
+};
 use std::{path::PathBuf, str::FromStr, thread::sleep, time::Duration};
-use swiftness::{parse, types::StarkProof, TransformTo};
+use swiftness::{TransformTo, parse, types::StarkProof};
 
 const CHUNK_SIZE: usize = 500;
 
@@ -100,6 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         proof: read_proof(),
         schedule: Schedule::from_vec(tasks.into_iter().map(|t| t as u8).collect()),
         cache: Cache::default(),
+        intermediate: Intermediate::default(),
     };
     let stark_proof = bytemuck::bytes_of(&stark_proof_value);
 

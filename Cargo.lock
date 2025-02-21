@@ -1017,7 +1017,6 @@ dependencies = [
 [[package]]
 name = "funvec"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "bytemuck",
  "serde",
@@ -4354,7 +4353,6 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swiftness"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "bytemuck",
  "funvec",
@@ -4370,7 +4368,6 @@ dependencies = [
 [[package]]
 name = "swiftness_air"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "bytemuck",
  "funvec",
@@ -4389,7 +4386,6 @@ dependencies = [
 [[package]]
 name = "swiftness_commitment"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "blake2",
  "bytemuck",
@@ -4409,7 +4405,6 @@ dependencies = [
 [[package]]
 name = "swiftness_fri"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "bytemuck",
  "funvec",
@@ -4428,7 +4423,6 @@ dependencies = [
 [[package]]
 name = "swiftness_pow"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "blake2",
  "bytemuck",
@@ -4444,7 +4438,6 @@ dependencies = [
 [[package]]
 name = "swiftness_proof_parser"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -4460,7 +4453,6 @@ dependencies = [
 [[package]]
 name = "swiftness_stark"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "bytemuck",
  "funvec",
@@ -4480,7 +4472,6 @@ dependencies = [
 [[package]]
 name = "swiftness_transcript"
 version = "1.0.0"
-source = "git+https://github.com/matzayonc/swiftness.git?branch=solana#16b4024590ccdb741063c67c7f090e0822acd318"
 dependencies = [
  "starknet-crypto",
 ]

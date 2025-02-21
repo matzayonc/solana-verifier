@@ -1,4 +1,5 @@
 use bytemuck::{Pod, Zeroable};
+use intermediate::Intermediate;
 use serde::{Deserialize, Serialize};
 use solana_program::account_info::next_account_info;
 use solana_program::entrypoint;
@@ -9,7 +10,9 @@ use stack::Schedule;
 pub use swiftness_stark::types::{Cache, Felt, StarkProof};
 use task::Task;
 
+pub mod intermediate;
 pub mod stack;
+mod stark_verify;
 pub mod task;
 
 // declare and export the program's entrypoint
@@ -27,9 +30,10 @@ pub enum Entrypoint<'a> {
 #[derive(Clone, Copy, Default, Zeroable, Pod)]
 #[repr(C)]
 pub struct ProofAccount {
-    pub proof: StarkProof,
-    pub cache: Cache,
-    pub schedule: Schedule<u8, 1000>,
+    pub proof: StarkProof,            // The proof to verify.
+    pub cache: Cache,                 // Inner-task data.
+    pub intermediate: Intermediate, // Values calculated while proving, and used for subsequent tasks.
+    pub schedule: Schedule<u8, 1000>, // Tasks remaining to be executed.
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -102,6 +106,7 @@ pub fn process_instruction<'a>(
                 proof,
                 cache,
                 schedule,
+                intermediate,
             } = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
 
             let Some(task) = schedule.next() else {
@@ -123,7 +128,7 @@ pub fn process_instruction<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use swiftness::{parse, TransformTo};
+    use swiftness::{TransformTo, parse};
 
     pub fn read_proof() -> ProofAccount {
         let small_json = include_str!("../resources/small.json");
@@ -134,6 +139,7 @@ mod tests {
             proof,
             cache: Cache::default(),
             schedule: Schedule::from_vec(vec![Task::VerifyProof as u8]),
+            intermediate: Intermediate::default(),
         }
     }
 

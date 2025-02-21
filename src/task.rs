@@ -28,10 +28,7 @@ pub trait TaskTrait {
 impl<'a> TaskTrait for VerifyProofView<'a> {
     fn execute(&mut self) {
         let security_bits = self.proof.config.security_bits();
-        let _res = self
-            .proof
-            .verify::<Layout>(self.cache, security_bits)
-            .unwrap();
+        let _res = self.proof.verify::<Layout>(self.cache, security_bits);
     }
 }
 
