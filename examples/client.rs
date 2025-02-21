@@ -9,10 +9,7 @@ use solana_sdk::{
     system_instruction,
     transaction::Transaction,
 };
-use solana_verifier::{
-    Cache, Entrypoint, PROGRAM_ID, ProofAccount, intermediate::Intermediate, stack::Schedule,
-    task::Task,
-};
+use solana_verifier::{Entrypoint, PROGRAM_ID, ProofAccount};
 use std::{path::PathBuf, str::FromStr, thread::sleep, time::Duration};
 use swiftness::{TransformTo, parse, types::StarkProof};
 
@@ -96,14 +93,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Using keypair {}, at {}", payer.pubkey(), client.url());
 
-    let tasks = vec![Task::VerifyProof];
-
     // let stark_proof = include_bytes!("../resources/proof.bin");
     let stark_proof_value = ProofAccount {
         proof: read_proof(),
-        schedule: Schedule::from_vec(tasks.into_iter().map(|t| t as u8).collect()),
-        cache: Cache::default(),
-        intermediate: Intermediate::default(),
+        ..Default::default()
     };
     let stark_proof = bytemuck::bytes_of(&stark_proof_value);
 
@@ -199,14 +192,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let ix = Instruction {
+    let schedule_ix = Instruction {
+        program_id,
+        accounts: vec![AccountMeta::new(proof_data_account.pubkey(), false)],
+        data: bincode::serialize(&Entrypoint::Schedule {}).unwrap(),
+    };
+
+    let verify_ix = Instruction {
         program_id,
         accounts: vec![AccountMeta::new(proof_data_account.pubkey(), false)],
         data: bincode::serialize(&Entrypoint::VerifyProof {}).unwrap(),
     };
 
     let blockhash = client.get_latest_blockhash().await.unwrap();
-    let tx = Transaction::new_signed_with_payer(&[ix], Some(&payer.pubkey()), &[&payer], blockhash);
+    let tx = Transaction::new_signed_with_payer(
+        &[schedule_ix, verify_ix.clone(), verify_ix],
+        Some(&payer.pubkey()),
+        &[&payer],
+        blockhash,
+    );
 
     client.send_and_confirm_transaction(&tx).await.unwrap();
 

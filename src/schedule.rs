@@ -50,10 +50,21 @@ where
         self.top += 1;
     }
 
-    pub fn from_vec(vec: Vec<T>) -> Self {
+    pub fn push_slice(&mut self, vec: &[T]) {
+        self.data[self.top..self.top + vec.len()].copy_from_slice(&vec);
+        self.top += vec.len();
+    }
+
+    pub fn flush(&mut self) {
+        self.finished = 0;
+        self.top = 0;
+    }
+
+    pub fn from_slice(vec: &[T]) -> Self {
         let mut stack = Self::default();
         stack.data[..vec.len()].copy_from_slice(&vec);
         stack.top = vec.len();
+        stack.finished = 0;
         stack
     }
 }

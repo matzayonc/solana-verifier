@@ -1,19 +1,19 @@
 use bytemuck::{Pod, Zeroable};
 use intermediate::Intermediate;
+use schedule::Schedule;
 use serde::{Deserialize, Serialize};
 use solana_program::account_info::next_account_info;
 use solana_program::entrypoint;
 use solana_program::program_error::ProgramError;
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey};
 
-use stack::Schedule;
 pub use swiftness_stark::types::{Cache, Felt, StarkProof};
-use task::Task;
+use task::Tasks;
 
 pub mod intermediate;
-pub mod stack;
-mod stark_verify;
+pub mod schedule;
 pub mod task;
+mod verify;
 
 // declare and export the program's entrypoint
 entrypoint!(process_instruction_data);
@@ -24,7 +24,8 @@ pub const PROGRAM_ID: &str = "HbyQVcEA8R6fp7SA6YbJsLNZsBcWjPgHckng1ZZGfUm2";
 #[derive(Serialize, Deserialize)]
 pub enum Entrypoint<'a> {
     PublishFragment { offset: usize, data: &'a [u8] },
-    VerifyProof {},
+    Schedule,
+    VerifyProof,
 }
 
 #[derive(Clone, Copy, Default, Zeroable, Pod)]
@@ -40,9 +41,9 @@ pub struct ProofAccount {
 #[repr(u8)]
 pub enum VerificationStage {
     #[default]
-    Publish,
-    Verify,
-    Verified,
+    Publish = 0,
+    Verify = 1,
+    Verified = 2,
 }
 
 impl TryFrom<u8> for VerificationStage {
@@ -70,10 +71,6 @@ pub fn process_instruction_data(
     let mut account_data = account.try_borrow_mut_data()?;
     let mut stage = VerificationStage::try_from(account_data[0])?;
 
-    if matches!(instruction, Entrypoint::VerifyProof {}) {
-        stage = VerificationStage::Verify;
-    }
-
     // Skipping the first byte as stage, and 7 as padding to get the correct alignment.
     stage = process_instruction(instruction, &mut account_data[8..], stage)?;
     account_data[0] = stage as u8;
@@ -87,7 +84,7 @@ pub fn process_instruction<'a>(
     account_data: &mut [u8],
     stage: VerificationStage,
 ) -> Result<VerificationStage, ProgramError> {
-    match instruction {
+    let stage_after = match instruction {
         Entrypoint::PublishFragment { offset, data } => {
             if stage != VerificationStage::Publish {
                 return Err(ProgramError::Custom(7));
@@ -95,11 +92,31 @@ pub fn process_instruction<'a>(
 
             account_data[offset..offset + data.len()].copy_from_slice(data);
             msg!("PublishFragment");
+            VerificationStage::Publish
         }
 
-        Entrypoint::VerifyProof {} => {
-            if stage != VerificationStage::Verify {
+        Entrypoint::Schedule => {
+            if stage != VerificationStage::Publish {
                 return Err(ProgramError::Custom(8));
+            }
+
+            let ProofAccount { schedule, .. } =
+                bytemuck::from_bytes_mut::<ProofAccount>(account_data);
+
+            schedule.flush();
+            schedule.push_slice(&[
+                Tasks::VerifyProofWithoutStark as u8,
+                Tasks::StarkVerify as u8,
+            ]);
+
+            msg!("Schedule");
+
+            VerificationStage::Verify
+        }
+
+        Entrypoint::VerifyProof => {
+            if stage != VerificationStage::Verify {
+                return Err(ProgramError::Custom(9));
             }
 
             let ProofAccount {
@@ -113,16 +130,24 @@ pub fn process_instruction<'a>(
                 return Err(ProgramError::Custom(3));
             };
 
-            let mut task = Task::try_from(*task)?;
-            let mut task = task.view(proof, cache);
+            let task = Tasks::try_from(*task)?;
+            let mut task = task.view(proof, cache, intermediate);
 
-            task.execute();
+            let children = task.execute().unwrap();
+
+            schedule.push_slice(&children.iter().map(|c| *c as u8).collect::<Vec<_>>());
 
             return Err(ProgramError::Custom(42));
-        }
-    }
 
-    Ok(stage)
+            // if schedule.finished() {
+            //     VerificationStage::Verified
+            // } else {
+            //     VerificationStage::Verify
+            // }
+        }
+    };
+
+    Ok(stage_after)
 }
 
 #[cfg(test)]
@@ -135,10 +160,14 @@ mod tests {
         let stark_proof = parse(small_json).unwrap();
         let proof = stark_proof.transform_to();
 
+        let mut schedule = Schedule::default();
+        schedule.push(Tasks::VerifyProofWithoutStark as u8);
+        schedule.push(Tasks::StarkVerify as u8);
+
         ProofAccount {
             proof,
             cache: Cache::default(),
-            schedule: Schedule::from_vec(vec![Task::VerifyProof as u8]),
+            schedule,
             intermediate: Intermediate::default(),
         }
     }

@@ -1,55 +1,46 @@
 use solana_program::program_error::ProgramError;
-use swiftness_air::layout::recursive::Layout;
 pub use swiftness_stark::types::{Cache, Felt, StarkProof};
 
-#[derive(Debug, Clone)]
-#[repr(C)]
-pub enum Job {
-    Job { jobs: Vec<Job> },
-    Task { task: Task },
-}
+use crate::verify::stark_verify::StarkVerifyTask;
+use crate::{intermediate::Intermediate, verify::VerifyProofTask};
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(u8)]
-pub enum Task {
+pub enum Tasks {
     #[default]
-    VerifyProof = 1,
+    VerifyProofWithoutStark = 1,
+    StarkVerify = 2,
 }
 
-struct VerifyProofView<'a> {
-    proof: &'a mut StarkProof,
-    cache: &'a mut Cache,
+pub type TaskResult = Result<Vec<Tasks>, ()>;
+
+pub trait Task {
+    fn execute(&mut self) -> TaskResult;
 }
 
-pub trait TaskTrait {
-    fn execute(&mut self);
-}
-
-impl<'a> TaskTrait for VerifyProofView<'a> {
-    fn execute(&mut self) {
-        let security_bits = self.proof.config.security_bits();
-        let _res = self.proof.verify::<Layout>(self.cache, security_bits);
-    }
-}
-
-impl Task {
+impl Tasks {
     pub fn view<'a>(
-        &'a mut self,
+        self,
         proof: &'a mut StarkProof,
         cache: &'a mut Cache,
-    ) -> Box<dyn TaskTrait + 'a> {
+        intermediate: &'a mut Intermediate,
+    ) -> Box<dyn Task + 'a> {
         match self {
-            Task::VerifyProof => Box::new(VerifyProofView { proof, cache }),
+            Tasks::VerifyProofWithoutStark => {
+                Box::new(VerifyProofTask::view(proof, cache, intermediate))
+            }
+            Tasks::StarkVerify => Box::new(StarkVerifyTask::view(proof, cache, intermediate)),
         }
     }
 }
 
-impl TryFrom<u8> for Task {
+impl TryFrom<u8> for Tasks {
     type Error = ProgramError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         Ok(match value {
-            1 => Task::VerifyProof,
+            1 => Tasks::VerifyProofWithoutStark,
+            2 => Tasks::StarkVerify,
             _ => return Err(ProgramError::Custom(2)),
         })
     }
