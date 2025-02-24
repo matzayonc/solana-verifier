@@ -7,8 +7,9 @@ use solana_program::entrypoint;
 use solana_program::program_error::ProgramError;
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey};
 
-pub use swiftness_stark::types::{Cache, Felt, StarkProof};
-use task::Tasks;
+pub use swiftness_stark::types::{Felt, LegacyCache, StarkProof};
+use task::{RawTask, Tasks};
+use verify::stark_verify::table_decommit::TableDecommitCache;
 
 pub mod intermediate;
 pub mod schedule;
@@ -31,10 +32,17 @@ pub enum Entrypoint<'a> {
 #[derive(Clone, Copy, Default, Zeroable, Pod)]
 #[repr(C)]
 pub struct ProofAccount {
-    pub proof: StarkProof,            // The proof to verify.
-    pub cache: Cache,                 // Inner-task data.
+    pub proof: StarkProof,                 // The proof to verify.
+    pub cache: Cache,                      // Inner-task data.
     pub intermediate: Intermediate, // Values calculated while proving, and used for subsequent tasks.
-    pub schedule: Schedule<u8, 1000>, // Tasks remaining to be executed.
+    pub schedule: Schedule<RawTask, 1000>, // Tasks remaining to be executed.
+}
+
+#[derive(Debug, Clone, Copy, Default, Zeroable, Pod)]
+#[repr(C)]
+pub struct Cache {
+    pub legacy: LegacyCache,
+    pub table: TableDecommitCache,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -104,7 +112,7 @@ pub fn process_instruction<'a>(
                 bytemuck::from_bytes_mut::<ProofAccount>(account_data);
 
             schedule.flush();
-            schedule.push(Tasks::VerifyProofWithoutStark as u8);
+            schedule.push(Tasks::VerifyProofWithoutStark.into());
 
             msg!("Schedule");
 
@@ -127,12 +135,18 @@ pub fn process_instruction<'a>(
                 return Err(ProgramError::Custom(3));
             };
 
-            let task = Tasks::try_from(*task)?;
+            let task = Tasks::try_from(task)?;
             let mut task = task.view(proof, cache, intermediate);
 
             let children = task.execute().unwrap();
 
-            schedule.push_slice(&children.iter().map(|c| *c as u8).collect::<Vec<_>>());
+            schedule.push_slice(
+                &children
+                    .iter()
+                    .copied()
+                    .map(|c| c.into())
+                    .collect::<Vec<_>>(),
+            );
 
             // return Err(ProgramError::Custom(42));
 
@@ -157,15 +171,9 @@ mod tests {
         let stark_proof = parse(small_json).unwrap();
         let proof = stark_proof.transform_to();
 
-        let mut schedule = Schedule::default();
-        schedule.push(Tasks::VerifyProofWithoutStark as u8);
-        schedule.push(Tasks::StarkVerify as u8);
-
         ProofAccount {
             proof,
-            cache: Cache::default(),
-            schedule,
-            intermediate: Intermediate::default(),
+            ..Default::default()
         }
     }
 
@@ -184,7 +192,7 @@ mod tests {
             c += 1;
         }
 
-        assert_eq!(c, 3);
+        assert_eq!(c, 6);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 

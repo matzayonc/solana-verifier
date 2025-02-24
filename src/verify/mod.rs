@@ -1,34 +1,25 @@
-pub mod stark_verify;
-pub mod verify_output;
-use swiftness::{commit::stark_commit, queries::generate_queries, stark::Error};
+use swiftness::{commit::stark_commit, queries::generate_queries, stark::Error, types::CacheStark};
 use swiftness_air::{
     Transcript,
     domains::StarkDomains,
     layout::{GenericLayoutTrait, LayoutTrait, recursive::Layout},
 };
-pub use swiftness_stark::types::{Cache, StarkProof};
+pub use swiftness_stark::types::StarkProof;
 
 use crate::{
-    ProofAccount,
+    Cache,
     intermediate::{Intermediate, VerifyIntermediate},
     task::{Task, Tasks},
 };
 
+pub mod stark_verify;
+pub mod verify_output;
+
 #[derive(Debug)]
 pub struct VerifyProofTask<'a> {
     proof: &'a mut StarkProof,
-    cache: &'a mut Cache,
+    cache: &'a mut CacheStark,
     intermediate: &'a mut VerifyIntermediate,
-}
-
-impl<'a> From<&'a mut ProofAccount> for VerifyProofTask<'a> {
-    fn from(proof: &'a mut ProofAccount) -> Self {
-        VerifyProofTask {
-            proof: &mut proof.proof,
-            cache: &mut proof.cache,
-            intermediate: &mut proof.intermediate.verify,
-        }
-    }
 }
 
 impl<'a> Task for VerifyProofTask<'a> {
@@ -78,11 +69,11 @@ impl<'a> Task for VerifyProofTask<'a> {
                 .get_hash(self.proof.config.n_verifier_friendly_commitment_layers),
         );
 
-        let Cache { stark, .. } = self.cache;
+        // let Cache { stark, .. } = self.cache;
 
         // STARK commitment phase.
         *stark_commitment = stark_commit::<Layout>(
-            stark,
+            self.cache,
             transcript,
             &self.proof.public_input,
             &self.proof.unsent_commitment,
@@ -113,7 +104,7 @@ impl<'a> VerifyProofTask<'a> {
     ) -> Self {
         VerifyProofTask {
             proof,
-            cache,
+            cache: &mut cache.legacy.stark,
             intermediate: &mut intermediate.verify,
         }
     }

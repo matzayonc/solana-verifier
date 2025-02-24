@@ -45,6 +45,10 @@ where
         }
     }
 
+    pub fn next_owned(&mut self) -> Option<T> {
+        self.next().map(|t| t.clone())
+    }
+
     pub fn push(&mut self, value: T) {
         self.data[self.top] = value;
         self.top += 1;

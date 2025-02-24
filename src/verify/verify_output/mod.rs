@@ -1,11 +1,11 @@
 use swiftness::funvec::FunVec;
-use swiftness::types::Cache;
 use swiftness::types::Felt;
 use swiftness::types::StarkProof;
 use swiftness_air::layout::LayoutTrait;
 use swiftness_air::layout::recursive::Layout;
 use swiftness_air::public_memory::PublicInput;
 
+use crate::Cache;
 use crate::intermediate::Intermediate;
 use crate::task::Task;
 use crate::task::TaskResult;
