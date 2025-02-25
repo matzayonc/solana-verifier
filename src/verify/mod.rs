@@ -2,7 +2,7 @@ use swiftness::{commit::stark_commit, queries::generate_queries, stark::Error, t
 use swiftness_air::{
     Transcript,
     domains::StarkDomains,
-    layout::{GenericLayoutTrait, LayoutTrait, recursive::Layout},
+    layout::{GenericLayoutTrait, LayoutTrait, recursive_with_poseidon::Layout},
 };
 pub use swiftness_stark::types::StarkProof;
 
@@ -69,10 +69,9 @@ impl<'a> Task for VerifyProofTask<'a> {
                 .get_hash(self.proof.config.n_verifier_friendly_commitment_layers),
         );
 
-        // let Cache { stark, .. } = self.cache;
-
         // STARK commitment phase.
-        *stark_commitment = stark_commit::<Layout>(
+        stark_commit(
+            stark_commitment,
             self.cache,
             transcript,
             &self.proof.public_input,
@@ -88,9 +87,6 @@ impl<'a> Task for VerifyProofTask<'a> {
             self.proof.config.n_queries,
             stark_domains.eval_domain_size,
         ));
-
-        // Moves queries to the cache to free up memory.
-        // queries = self.cache.verify.queries.move_to(queries);
 
         Ok(vec![Tasks::StarkVerify, Tasks::VerifyOutput])
     }

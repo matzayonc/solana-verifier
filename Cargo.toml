@@ -21,17 +21,17 @@ bytemuck = "1.21.0"
 serde = { version = "1.0.217", features = ["derive"] }
 solana-program = { git = "https://github.com/Okm165/solana.git", branch = "fix/deps" }
 swiftness_air = { path = "../swiftness/crates/air", default-features = false, features = [
-    "recursive",
+    "recursive_with_poseidon",
     "keccak_160_lsb",
     "stone6",
 ] }
 swiftness_stark = { path = "../swiftness/crates/stark", default-features = false, features = [
-    "recursive",
+    "recursive_with_poseidon",
     "keccak_160_lsb",
     "stone6",
 ] }
 swiftness = { path = "../swiftness/cli", default-features = false, features = [
-    "recursive",
+    "recursive_with_poseidon",
     "keccak_160_lsb",
     "stone6",
 ] }

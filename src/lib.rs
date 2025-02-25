@@ -120,6 +120,10 @@ pub fn process_instruction<'a>(
         }
 
         Entrypoint::VerifyProof => {
+            if stage == VerificationStage::Verified {
+                return Err(ProgramError::Custom(32));
+            }
+
             if stage != VerificationStage::Verify {
                 return Err(ProgramError::Custom(9));
             }
@@ -136,6 +140,9 @@ pub fn process_instruction<'a>(
             };
 
             let task = Tasks::try_from(task)?;
+            let task_name = format!("{:?}", task);
+            msg!("Executing task: {}", task_name);
+
             let mut task = task.view(proof, cache, intermediate);
 
             let children = task.execute().unwrap();
@@ -167,7 +174,7 @@ mod tests {
     use swiftness::{TransformTo, parse};
 
     pub fn read_proof() -> ProofAccount {
-        let small_json = include_str!("../resources/small.json");
+        let small_json = include_str!("../resources/saya.json");
         let stark_proof = parse(small_json).unwrap();
         let proof = stark_proof.transform_to();
 
@@ -198,11 +205,11 @@ mod tests {
 
         assert_eq!(
             intermediate.program_hash().to_string(),
-            "1134405407503728996667931466883426118808998438966777289406309056327695405399"
+            "2600195635685626119055100741094371725887213141003183770434823435664529167464"
         );
         assert_eq!(
-            intermediate.output(),
-            &[Felt::from(0), Felt::from(1), Felt::from(5)]
+            format!("{:?}", intermediate.output()),
+            "[0x1, 0x4, 0x193641eb151b0f41674641089952e60bc3aded26e3cf42793655c562b8c3aa0, 0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07, 0xb2c58e4eec9b5a8f0c5ba4d15ae59c8ac8a8d96fca443dd591296ba3391aaf]"
         );
     }
 }

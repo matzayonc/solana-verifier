@@ -2,9 +2,7 @@ use swiftness::{
     funvec::{FUNVEC_QUERIES, FunVec},
     types::{Felt, StarkCommitment},
 };
-use swiftness_air::{
-    Transcript, domains::StarkDomains, layout::recursive::global_values::InteractionElements,
-};
+use swiftness_air::{Transcript, domains::StarkDomains};
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
@@ -33,7 +31,7 @@ pub struct VerifyIntermediate {
     pub n_interaction_columns: u32,
     pub stark_domains: StarkDomains,
     pub transcript: Transcript,
-    pub stark_commitment: StarkCommitment<InteractionElements>,
+    pub stark_commitment: StarkCommitment,
     pub queries: FunVec<Felt, FUNVEC_QUERIES>,
 }
 

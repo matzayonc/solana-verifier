@@ -2,7 +2,7 @@ use swiftness::funvec::FunVec;
 use swiftness::types::Felt;
 use swiftness::types::StarkProof;
 use swiftness_air::layout::LayoutTrait;
-use swiftness_air::layout::recursive::Layout;
+use swiftness_air::layout::recursive_with_poseidon::Layout;
 use swiftness_air::public_memory::PublicInput;
 
 use crate::Cache;
@@ -19,11 +19,6 @@ pub struct VerifyOutputTask<'a> {
 impl<'a> Task for VerifyOutputTask<'a> {
     fn execute(&mut self) -> TaskResult {
         let (program_hash, output) = Layout::verify_public_input(&self.public_input).unwrap();
-
-        assert_eq!(
-            program_hash.to_string(),
-            "1134405407503728996667931466883426118808998438966777289406309056327695405399"
-        );
 
         *self.program_hash = program_hash;
         self.output.move_to(output);

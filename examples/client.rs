@@ -38,7 +38,7 @@ async fn send_transactions(
 }
 
 pub fn read_proof() -> StarkProof {
-    let small_json = include_str!("../resources/small.json");
+    let small_json = include_str!("../resources/saya.json");
     let stark_proof = parse(small_json).unwrap();
     stark_proof.transform_to()
 }

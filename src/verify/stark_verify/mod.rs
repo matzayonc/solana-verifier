@@ -10,10 +10,8 @@ use swiftness::types::StarkCommitment;
 use swiftness::types::StarkProof;
 use swiftness::types::StarkWitness;
 use swiftness_air::domains::StarkDomains;
-use swiftness_air::layout::recursive::Layout;
-use swiftness_air::layout::recursive::global_values::InteractionElements;
+use swiftness_air::layout::recursive_with_poseidon::Layout;
 use swiftness_air::public_memory::PublicInput;
-use swiftness_stark::verify::stark_verify;
 use table_decommit::TableDecommitTarget;
 
 use crate::Cache;
@@ -30,7 +28,7 @@ pub struct StarkVerifyTask<'a> {
     pub n_interaction_columns: u32,
     pub public_input: &'a PublicInput,
     pub queries: &'a [Felt],
-    pub commitment: &'a StarkCommitment<InteractionElements>,
+    pub commitment: &'a StarkCommitment,
     pub witness: &'a mut StarkWitness,
     pub stark_domains: &'a StarkDomains,
 }
@@ -73,10 +71,10 @@ impl<'a> Task for StarkVerifyTask<'a> {
 
         // Evaluate the FRI input layer at query points.
         let eval_info = OodsEvaluationInfo {
-            oods_values: &commitment.oods_values.as_slice().to_vec(),
+            oods_values: commitment.oods_values.as_slice(),
             oods_point: &commitment.interaction_after_composition,
             trace_generator: &stark_domains.trace_generator,
-            constraint_coefficients: &commitment.interaction_after_oods.as_slice().to_vec(),
+            constraint_coefficients: commitment.interaction_after_oods.as_slice(),
         };
         let oods_poly_evals = eval_oods_boundary_poly_at_points::<Layout>(
             eval_oods,
