@@ -29,7 +29,7 @@ pub enum Entrypoint<'a> {
     VerifyProof,
 }
 
-#[derive(Clone, Copy, Default, Zeroable, Pod)]
+#[derive(Clone, Copy, Default, Zeroable, Pod, Debug, PartialEq)]
 #[repr(C)]
 pub struct ProofAccount {
     pub proof: StarkProof,                 // The proof to verify.
@@ -38,7 +38,7 @@ pub struct ProofAccount {
     pub schedule: Schedule<RawTask, 1000>, // Tasks remaining to be executed.
 }
 
-#[derive(Debug, Clone, Copy, Default, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, Default, Zeroable, Pod, PartialEq)]
 #[repr(C)]
 pub struct Cache {
     pub legacy: LegacyCache,
@@ -184,10 +184,45 @@ mod tests {
         }
     }
 
+    pub fn read_proof_from_file() -> Vec<u8> {
+        // For some reason `include_bytes` returns different bytes.
+        // let account_data = include_bytes!("../resources/proof.bin");        let account_data = std::fs::read("resources/proof.bin").unwrap();
+        let account_data = std::fs::read("resources/proof.bin").unwrap();
+
+        // Casting first to ensure data is in fact a ProofAccount.
+        let account = bytemuck::from_bytes::<ProofAccount>(&account_data);
+
+        bytemuck::bytes_of(account).to_vec()
+    }
+
+    #[ignore]
+    #[test]
+    pub fn prepare_account() {
+        let small_json = include_str!("../resources/saya.json");
+        let stark_proof = parse(small_json).unwrap();
+        let proof = stark_proof.transform_to();
+
+        let proof_account = ProofAccount {
+            proof,
+            ..Default::default()
+        };
+        let account_data = bytemuck::bytes_of(&proof_account);
+
+        std::fs::write("resources/proof.bin", account_data).unwrap();
+        let account_data = std::fs::read("resources/proof.bin").unwrap();
+        let read_proof_account = bytemuck::from_bytes::<ProofAccount>(&account_data);
+
+        assert_eq!(&proof_account, read_proof_account);
+
+        // let account_data = include_bytes!("../resources/proof.bin");
+        // let proof_account = bytemuck::from_bytes::<ProofAccount>(account_data);
+
+        // assert_eq!(&proof_account, &read_proof_account);
+    }
+
     #[test]
     fn test_deserialize_proof() {
-        let mut proof_account: ProofAccount = read_proof();
-        let account_data = bytemuck::bytes_of_mut(&mut proof_account);
+        let account_data = &mut read_proof_from_file()[..];
 
         let mut stage = VerificationStage::Publish;
 

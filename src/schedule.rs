@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 pub struct Schedule<T, const N: usize>
 where

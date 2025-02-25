@@ -22,7 +22,7 @@ pub struct TableDecommitTask<'a> {
     pub witness: &'a Witness,
 }
 
-#[derive(Debug, Clone, Copy, Default, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, Default, Zeroable, Pod, PartialEq)]
 #[repr(C)]
 pub struct TableDecommitCache {
     pub commitment: CacheCommitment, // TODO: minimize this;

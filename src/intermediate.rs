@@ -4,7 +4,7 @@ use swiftness::{
 };
 use swiftness_air::{Transcript, domains::StarkDomains};
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct Intermediate {
     pub verify: VerifyIntermediate,
@@ -24,7 +24,7 @@ impl Intermediate {
 unsafe impl bytemuck::Zeroable for Intermediate {}
 unsafe impl bytemuck::Pod for Intermediate {}
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct VerifyIntermediate {
     pub n_original_columns: u32,
@@ -35,7 +35,7 @@ pub struct VerifyIntermediate {
     pub queries: FunVec<Felt, FUNVEC_QUERIES>,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[repr(C)]
 pub struct VerifyOutputIntermediate {
     pub output: FunVec<Felt, 1024>,

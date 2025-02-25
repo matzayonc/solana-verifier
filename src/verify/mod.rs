@@ -23,9 +23,9 @@ pub struct VerifyProofTask<'a> {
 }
 
 impl<'a> Task for VerifyProofTask<'a> {
+    // let _res = self.proof.verify::<Layout>(self.cache, security_bits);
     fn execute(&mut self) -> Result<Vec<Tasks>, ()> {
         let security_bits = self.proof.config.security_bits();
-        // let _res = self.proof.verify::<Layout>(self.cache, security_bits);
 
         let VerifyIntermediate {
             n_original_columns,
