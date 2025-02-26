@@ -12,6 +12,8 @@ use crate::{
     task::{Task, Tasks},
 };
 
+pub mod generate_queries;
+pub mod stark_commit;
 pub mod stark_verify;
 pub mod verify_output;
 
@@ -69,26 +71,12 @@ impl<'a> Task for VerifyProofTask<'a> {
                 .get_hash(self.proof.config.n_verifier_friendly_commitment_layers),
         );
 
-        // STARK commitment phase.
-        stark_commit(
-            stark_commitment,
-            self.cache,
-            transcript,
-            &self.proof.public_input,
-            &self.proof.unsent_commitment,
-            &self.proof.config,
-            &stark_domains,
-        )
-        .unwrap();
-
-        // Generate queries.
-        queries.move_to(generate_queries(
-            transcript,
-            self.proof.config.n_queries,
-            stark_domains.eval_domain_size,
-        ));
-
-        Ok(vec![Tasks::StarkVerify, Tasks::VerifyOutput])
+        Ok(vec![
+            Tasks::StarkCommit,
+            Tasks::GenerateQueries,
+            Tasks::StarkVerify,
+            Tasks::VerifyOutput,
+        ])
     }
 }
 

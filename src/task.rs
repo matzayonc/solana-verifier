@@ -2,6 +2,8 @@ use solana_program::program_error::ProgramError;
 pub use swiftness_stark::types::{Felt, StarkProof};
 
 use crate::Cache;
+use crate::verify::generate_queries::GenerateQueriesTask;
+use crate::verify::stark_commit::StarkCommitTask;
 use crate::verify::stark_verify::StarkVerifyTask;
 use crate::verify::stark_verify::table_decommit::{TableDecommitTarget, TableDecommitTask};
 use crate::verify::verify_output::VerifyOutputTask;
@@ -15,6 +17,8 @@ pub enum Tasks {
     StarkVerify = 2,
     VerifyOutput = 3,
     TableDecommit(TableDecommitTarget) = 4,
+    StarkCommit = 5,
+    GenerateQueries = 6,
 }
 
 pub type TaskResult = Result<Vec<Tasks>, ()>;
@@ -41,6 +45,10 @@ impl Tasks {
             Tasks::TableDecommit(target) => {
                 Box::new(TableDecommitTask::view(target, proof, cache, intermediate))
             }
+            Tasks::StarkCommit => Box::new(StarkCommitTask::view(proof, cache, intermediate)),
+            Tasks::GenerateQueries => {
+                Box::new(GenerateQueriesTask::view(proof, cache, intermediate))
+            }
         }
     }
 }
@@ -56,6 +64,8 @@ impl TryFrom<&RawTask> for Tasks {
             2 => Tasks::StarkVerify,
             3 => Tasks::VerifyOutput,
             4 => Tasks::TableDecommit(TableDecommitTarget::try_from(tail[0])?),
+            5 => Tasks::StarkCommit,
+            6 => Tasks::GenerateQueries,
             _ => return Err(ProgramError::Custom(2)),
         })
     }
@@ -68,6 +78,8 @@ impl From<Tasks> for RawTask {
             Tasks::StarkVerify => [2, 0, 0, 0],
             Tasks::VerifyOutput => [3, 0, 0, 0],
             Tasks::TableDecommit(target) => [4, target as u8, 0, 0],
+            Tasks::StarkCommit => [5, 0, 0, 0],
+            Tasks::GenerateQueries => [6, 0, 0, 0],
         }
     }
 }

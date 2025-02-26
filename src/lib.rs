@@ -19,7 +19,7 @@ mod verify;
 // declare and export the program's entrypoint
 entrypoint!(process_instruction_data);
 
-pub const PROGRAM_ID: &str = "HbyQVcEA8R6fp7SA6YbJsLNZsBcWjPgHckng1ZZGfUm2";
+pub const PROGRAM_ID: &str = "ANH87aBZFKHhB3aLAndnp8cJd8QNL58buSeLCtVb1ukj";
 
 #[repr(u8)]
 #[derive(Serialize, Deserialize)]
@@ -185,13 +185,8 @@ mod tests {
     }
 
     pub fn read_proof_from_file() -> Vec<u8> {
-        // For some reason `include_bytes` returns different bytes.
-        // let account_data = include_bytes!("../resources/proof.bin");        let account_data = std::fs::read("resources/proof.bin").unwrap();
-        let account_data = std::fs::read("resources/proof.bin").unwrap();
-
-        // Casting first to ensure data is in fact a ProofAccount.
+        let account_data = include_bytes!("../resources/proof.bin").to_vec();
         let account = bytemuck::from_bytes::<ProofAccount>(&account_data);
-
         bytemuck::bytes_of(account).to_vec()
     }
 
@@ -208,16 +203,13 @@ mod tests {
         };
         let account_data = bytemuck::bytes_of(&proof_account);
 
-        std::fs::write("resources/proof.bin", account_data).unwrap();
-        let account_data = std::fs::read("resources/proof.bin").unwrap();
+        let account_data_path = "resources/proof.bin";
+
+        std::fs::write(account_data_path, account_data).unwrap();
+        let account_data = std::fs::read(account_data_path).unwrap();
         let read_proof_account = bytemuck::from_bytes::<ProofAccount>(&account_data);
 
         assert_eq!(&proof_account, read_proof_account);
-
-        // let account_data = include_bytes!("../resources/proof.bin");
-        // let proof_account = bytemuck::from_bytes::<ProofAccount>(account_data);
-
-        // assert_eq!(&proof_account, &read_proof_account);
     }
 
     #[test]
@@ -234,7 +226,7 @@ mod tests {
             c += 1;
         }
 
-        assert_eq!(c, 6);
+        assert_eq!(c, 8);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 
