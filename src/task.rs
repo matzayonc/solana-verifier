@@ -3,7 +3,7 @@ pub use swiftness_stark::types::{Felt, StarkProof};
 
 use crate::Cache;
 use crate::verify::generate_queries::GenerateQueriesTask;
-use crate::verify::stark_commit::StarkCommitTask;
+use crate::verify::stark_commit::{StarkCommitAssignTask, StarkCommitTask};
 use crate::verify::stark_verify::StarkVerifyTask;
 use crate::verify::stark_verify::table_decommit::{TableDecommitTarget, TableDecommitTask};
 use crate::verify::verify_output::VerifyOutputTask;
@@ -18,15 +18,15 @@ pub enum Tasks {
     VerifyOutput = 3,
     TableDecommit(TableDecommitTarget) = 4,
     StarkCommit = 5,
-    GenerateQueries = 6,
+    StarkCommitAssign = 6,
+    GenerateQueries = 7,
 }
-
-pub type TaskResult = Result<Vec<Tasks>, ()>;
 
 pub type RawTask = [u8; 4];
 
 pub trait Task {
-    fn execute(&mut self) -> TaskResult;
+    fn execute(&mut self);
+    fn children(&self) -> Vec<Tasks>;
 }
 
 impl Tasks {
@@ -49,6 +49,9 @@ impl Tasks {
             Tasks::GenerateQueries => {
                 Box::new(GenerateQueriesTask::view(proof, cache, intermediate))
             }
+            Tasks::StarkCommitAssign => {
+                Box::new(StarkCommitAssignTask::view(proof, cache, intermediate))
+            }
         }
     }
 }
@@ -65,7 +68,8 @@ impl TryFrom<&RawTask> for Tasks {
             3 => Tasks::VerifyOutput,
             4 => Tasks::TableDecommit(TableDecommitTarget::try_from(tail[0])?),
             5 => Tasks::StarkCommit,
-            6 => Tasks::GenerateQueries,
+            6 => Tasks::StarkCommitAssign,
+            7 => Tasks::GenerateQueries,
             _ => return Err(ProgramError::Custom(2)),
         })
     }
@@ -79,7 +83,8 @@ impl From<Tasks> for RawTask {
             Tasks::VerifyOutput => [3, 0, 0, 0],
             Tasks::TableDecommit(target) => [4, target as u8, 0, 0],
             Tasks::StarkCommit => [5, 0, 0, 0],
-            Tasks::GenerateQueries => [6, 0, 0, 0],
+            Tasks::StarkCommitAssign => [6, 0, 0, 0],
+            Tasks::GenerateQueries => [7, 0, 0, 0],
         }
     }
 }

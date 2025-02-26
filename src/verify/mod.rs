@@ -25,7 +25,7 @@ pub struct VerifyProofTask<'a> {
 
 impl Task for VerifyProofTask<'_> {
     // let _res = self.proof.verify::<Layout>(self.cache, security_bits);
-    fn execute(&mut self) -> Result<Vec<Tasks>, ()> {
+    fn execute(&mut self) {
         let security_bits = self.proof.config.security_bits();
 
         let VerifyIntermediate {
@@ -68,13 +68,15 @@ impl Task for VerifyProofTask<'_> {
                 .public_input
                 .get_hash(self.proof.config.n_verifier_friendly_commitment_layers),
         );
+    }
 
-        Ok(vec![
+    fn children(&self) -> Vec<Tasks> {
+        vec![
             Tasks::StarkCommit,
             Tasks::GenerateQueries,
             Tasks::StarkVerify,
             Tasks::VerifyOutput,
-        ])
+        ]
     }
 }
 

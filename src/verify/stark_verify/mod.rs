@@ -17,7 +17,6 @@ use table_decommit::TableDecommitTarget;
 use crate::Cache;
 use crate::intermediate::Intermediate;
 use crate::task::Task;
-use crate::task::TaskResult;
 use crate::task::Tasks;
 
 pub mod table_decommit;
@@ -34,7 +33,7 @@ pub struct StarkVerifyTask<'a> {
 }
 
 impl Task for StarkVerifyTask<'_> {
-    fn execute(&mut self) -> TaskResult {
+    fn execute(&mut self) {
         // stark_verify::<Layout>(
         //     self.cache,
         //     self.n_original_columns,
@@ -99,13 +98,15 @@ impl Task for StarkVerifyTask<'_> {
             &fri_decommitment,
             &mut witness.fri_witness,
         )
-        .map_err(|_| ())?;
+        .unwrap();
+    }
 
-        Ok(vec![
+    fn children(&self) -> Vec<Tasks> {
+        vec![
             Tasks::TableDecommit(TableDecommitTarget::Original),
             Tasks::TableDecommit(TableDecommitTarget::Interaction),
             Tasks::TableDecommit(TableDecommitTarget::Composition),
-        ])
+        ]
     }
 }
 

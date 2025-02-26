@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use bytemuck::{Pod, Zeroable};
 use intermediate::Intermediate;
 use schedule::Schedule;
@@ -108,13 +110,32 @@ pub fn process_instruction(
                 return Err(ProgramError::Custom(8));
             }
 
-            let ProofAccount { schedule, .. } =
-                bytemuck::from_bytes_mut::<ProofAccount>(account_data);
+            let ProofAccount {
+                schedule,
+                proof,
+                cache,
+                intermediate,
+            } = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
 
             schedule.flush();
             schedule.push(Tasks::VerifyProofWithoutStark.into());
 
             msg!("Schedule");
+
+            let mut queue = VecDeque::new();
+            queue.push_back(Tasks::VerifyProofWithoutStark);
+
+            while let Some(task) = queue.pop_front() {
+                // Add the current task to schedule
+                schedule.push(task.into());
+                let task_view = task.view(proof, cache, intermediate);
+                let children = task_view.children();
+
+                // Add the children in a stack-like manner
+                for child in children.into_iter().rev() {
+                    queue.push_front(child);
+                }
+            }
 
             VerificationStage::Verify
         }
@@ -144,18 +165,7 @@ pub fn process_instruction(
             msg!("Executing task: {}", task_name);
 
             let mut task = task.view(proof, cache, intermediate);
-
-            let children = task.execute().unwrap();
-
-            schedule.push_slice(
-                &children
-                    .iter()
-                    .copied()
-                    .map(|c| c.into())
-                    .collect::<Vec<_>>(),
-            );
-
-            // return Err(ProgramError::Custom(42));
+            task.execute();
 
             if schedule.finished() {
                 VerificationStage::Verified
@@ -226,7 +236,7 @@ mod tests {
             c += 1;
         }
 
-        assert_eq!(c, 8);
+        assert_eq!(c, 10);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 

@@ -4,11 +4,14 @@ use swiftness::{
 };
 use swiftness_air::{Transcript, domains::StarkDomains};
 
+use crate::verify::stark_commit::StarkCommitIntermediate;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct Intermediate {
     pub verify: VerifyIntermediate,
     pub verify_output: VerifyOutputIntermediate,
+    pub stark_commit: StarkCommitIntermediate,
 }
 
 impl Intermediate {

@@ -12,7 +12,7 @@ use swiftness_air::swiftness_commitment::table::decommit::table_decommit;
 use crate::Cache;
 use crate::intermediate::Intermediate;
 use crate::task::Task;
-use crate::task::TaskResult;
+use crate::task::Tasks;
 
 pub struct TableDecommitTask<'a> {
     pub cache: &'a mut TableDecommitCache,
@@ -29,7 +29,7 @@ pub struct TableDecommitCache {
 }
 
 impl Task for TableDecommitTask<'_> {
-    fn execute(&mut self) -> TaskResult {
+    fn execute(&mut self) {
         table_decommit(
             &mut self.cache.commitment,
             self.commitment,
@@ -37,9 +37,11 @@ impl Task for TableDecommitTask<'_> {
             self.decommitment,
             self.witness,
         )
-        .map_err(|_| ())?;
+        .unwrap();
+    }
 
-        Ok(vec![])
+    fn children(&self) -> Vec<Tasks> {
+        vec![]
     }
 }
 

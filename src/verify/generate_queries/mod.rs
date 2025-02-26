@@ -8,7 +8,7 @@ use swiftness_air::Transcript;
 use crate::Cache;
 use crate::intermediate::Intermediate;
 use crate::task::Task;
-use crate::task::TaskResult;
+use crate::task::Tasks;
 
 pub struct GenerateQueriesTask<'a> {
     queries: &'a mut FunVec<Felt, FUNVEC_QUERIES>,
@@ -19,7 +19,7 @@ pub struct GenerateQueriesTask<'a> {
 
 impl Task for GenerateQueriesTask<'_> {
     // generate_queries()
-    fn execute(&mut self) -> TaskResult {
+    fn execute(&mut self) {
         let GenerateQueriesTask {
             queries,
             transcript,
@@ -28,8 +28,10 @@ impl Task for GenerateQueriesTask<'_> {
         } = self;
 
         queries.move_to(generate_queries(transcript, *n_samples, *query_upper_bound));
+    }
 
-        Ok(vec![])
+    fn children(&self) -> Vec<Tasks> {
+        vec![]
     }
 }
 
