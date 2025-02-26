@@ -3,7 +3,9 @@ pub use swiftness_stark::types::{Felt, StarkProof};
 
 use crate::Cache;
 use crate::verify::generate_queries::GenerateQueriesTask;
-use crate::verify::stark_commit::{StarkCommitAssignTask, StarkCommitTask};
+use crate::verify::stark_commit::{
+    StarkCommitAssignTask, StarkCommitFriTask, StarkCommitOodsCoefTask, StarkCommitTask,
+};
 use crate::verify::stark_verify::StarkVerifyTask;
 use crate::verify::stark_verify::table_decommit::{TableDecommitTarget, TableDecommitTask};
 use crate::verify::verify_output::VerifyOutputTask;
@@ -18,8 +20,10 @@ pub enum Tasks {
     VerifyOutput = 3,
     TableDecommit(TableDecommitTarget) = 4,
     StarkCommit = 5,
-    StarkCommitAssign = 6,
-    GenerateQueries = 7,
+    StarkCommitOodsCoef = 6,
+    StarkCommitFri = 7,
+    StarkCommitAssign = 8,
+    GenerateQueries = 9,
 }
 
 pub type RawTask = [u8; 4];
@@ -49,6 +53,10 @@ impl Tasks {
             Tasks::GenerateQueries => {
                 Box::new(GenerateQueriesTask::view(proof, cache, intermediate))
             }
+            Tasks::StarkCommitOodsCoef => {
+                Box::new(StarkCommitOodsCoefTask::view(proof, cache, intermediate))
+            }
+            Tasks::StarkCommitFri => Box::new(StarkCommitFriTask::view(proof, cache, intermediate)),
             Tasks::StarkCommitAssign => {
                 Box::new(StarkCommitAssignTask::view(proof, cache, intermediate))
             }
@@ -68,8 +76,10 @@ impl TryFrom<&RawTask> for Tasks {
             3 => Tasks::VerifyOutput,
             4 => Tasks::TableDecommit(TableDecommitTarget::try_from(tail[0])?),
             5 => Tasks::StarkCommit,
-            6 => Tasks::StarkCommitAssign,
-            7 => Tasks::GenerateQueries,
+            6 => Tasks::StarkCommitOodsCoef,
+            7 => Tasks::StarkCommitFri,
+            8 => Tasks::StarkCommitAssign,
+            9 => Tasks::GenerateQueries,
             _ => return Err(ProgramError::Custom(2)),
         })
     }
@@ -83,8 +93,10 @@ impl From<Tasks> for RawTask {
             Tasks::VerifyOutput => [3, 0, 0, 0],
             Tasks::TableDecommit(target) => [4, target as u8, 0, 0],
             Tasks::StarkCommit => [5, 0, 0, 0],
-            Tasks::StarkCommitAssign => [6, 0, 0, 0],
-            Tasks::GenerateQueries => [7, 0, 0, 0],
+            Tasks::StarkCommitOodsCoef => [6, 0, 0, 0],
+            Tasks::StarkCommitFri => [7, 0, 0, 0],
+            Tasks::StarkCommitAssign => [8, 0, 0, 0],
+            Tasks::GenerateQueries => [9, 0, 0, 0],
         }
     }
 }

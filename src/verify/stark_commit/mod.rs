@@ -1,7 +1,6 @@
 use swiftness::commit::powers_array;
 use swiftness::config::StarkConfig;
 use swiftness::oods::verify_oods;
-use swiftness::swiftness_fri::fri::fri_commit;
 use swiftness::types::CacheStark;
 use swiftness::types::Felt;
 use swiftness::types::StarkCommitment;
@@ -22,8 +21,12 @@ use crate::task::Task;
 use crate::task::Tasks;
 
 mod assign;
+mod fri_commit;
+mod oods_coef;
 
 pub use assign::*;
+pub use fri_commit::*;
+pub use oods_coef::*;
 
 pub struct StarkCommitTask<'a> {
     result: &'a mut StarkCommitment,
@@ -105,25 +108,14 @@ impl Task for StarkCommitTask<'_> {
             &stark_domains.trace_generator,
         )
         .unwrap();
-
-        // Generate interaction values after OODS.
-        intermediate.oods_alpha = transcript.random_felt_to_prover();
-
-        cache.powers_array.powers_array.flush();
-        let n = Layout::MASK_SIZE + Layout::CONSTRAINT_DEGREE;
-        powers_array(
-            cache.powers_array.powers_array.unchecked_slice_mut(n),
-            Felt::ONE,
-            intermediate.oods_alpha,
-            n as u32,
-        );
-
-        // Read fri commitment.
-        intermediate.fri_commitment = fri_commit(transcript, unsent_commitment.fri, config.fri);
     }
 
     fn children(&self) -> Vec<Tasks> {
-        vec![Tasks::StarkCommitAssign]
+        vec![
+            Tasks::StarkCommitOodsCoef,
+            Tasks::StarkCommitFri,
+            Tasks::StarkCommitAssign,
+        ]
     }
 }
 

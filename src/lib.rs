@@ -236,7 +236,7 @@ mod tests {
             c += 1;
         }
 
-        assert_eq!(c, 10);
+        assert_eq!(c, 12);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 
