@@ -87,8 +87,8 @@ pub fn process_instruction_data(
 }
 
 // program entrypoint's implementation
-pub fn process_instruction<'a>(
-    instruction: Entrypoint<'a>,
+pub fn process_instruction(
+    instruction: Entrypoint<'_>,
     account_data: &mut [u8],
     stage: VerificationStage,
 ) -> Result<VerificationStage, ProgramError> {
@@ -173,16 +173,16 @@ mod tests {
     use super::*;
     use swiftness::{TransformTo, parse};
 
-    pub fn read_proof() -> ProofAccount {
-        let small_json = include_str!("../resources/saya.json");
-        let stark_proof = parse(small_json).unwrap();
-        let proof = stark_proof.transform_to();
+    // pub fn read_proof() -> ProofAccount {
+    //     let small_json = include_str!("../resources/saya.json");
+    //     let stark_proof = parse(small_json).unwrap();
+    //     let proof = stark_proof.transform_to();
 
-        ProofAccount {
-            proof,
-            ..Default::default()
-        }
-    }
+    //     ProofAccount {
+    //         proof,
+    //         ..Default::default()
+    //     }
+    // }
 
     pub fn read_proof_from_file() -> Vec<u8> {
         let account_data = include_bytes!("../resources/proof.bin").to_vec();

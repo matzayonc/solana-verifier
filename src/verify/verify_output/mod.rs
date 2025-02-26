@@ -16,9 +16,9 @@ pub struct VerifyOutputTask<'a> {
     pub program_hash: &'a mut Felt,
 }
 
-impl<'a> Task for VerifyOutputTask<'a> {
+impl Task for VerifyOutputTask<'_> {
     fn execute(&mut self) -> TaskResult {
-        let (program_hash, output) = Layout::verify_public_input(&self.public_input).unwrap();
+        let (program_hash, output) = Layout::verify_public_input(self.public_input).unwrap();
 
         *self.program_hash = program_hash;
         self.output.move_to(output);

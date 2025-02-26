@@ -46,7 +46,7 @@ where
     }
 
     pub fn next_owned(&mut self) -> Option<T> {
-        self.next().map(|t| t.clone())
+        self.next().cloned()
     }
 
     pub fn push(&mut self, value: T) {
@@ -55,7 +55,7 @@ where
     }
 
     pub fn push_slice(&mut self, vec: &[T]) {
-        self.data[self.top..self.top + vec.len()].copy_from_slice(&vec);
+        self.data[self.top..self.top + vec.len()].copy_from_slice(vec);
         self.top += vec.len();
     }
 
@@ -66,7 +66,7 @@ where
 
     pub fn from_slice(vec: &[T]) -> Self {
         let mut stack = Self::default();
-        stack.data[..vec.len()].copy_from_slice(&vec);
+        stack.data[..vec.len()].copy_from_slice(vec);
         stack.top = vec.len();
         stack.finished = 0;
         stack

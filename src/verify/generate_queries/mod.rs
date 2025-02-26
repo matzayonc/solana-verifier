@@ -17,7 +17,7 @@ pub struct GenerateQueriesTask<'a> {
     query_upper_bound: Felt,
 }
 
-impl<'a> Task for GenerateQueriesTask<'a> {
+impl Task for GenerateQueriesTask<'_> {
     // generate_queries()
     fn execute(&mut self) -> TaskResult {
         let GenerateQueriesTask {
@@ -36,7 +36,7 @@ impl<'a> Task for GenerateQueriesTask<'a> {
 impl<'a> GenerateQueriesTask<'a> {
     pub fn view(
         proof: &'a mut StarkProof,
-        cache: &'a mut Cache,
+        _cache: &'a mut Cache,
         intermediate: &'a mut Intermediate,
     ) -> Self {
         GenerateQueriesTask {

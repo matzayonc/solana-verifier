@@ -33,7 +33,7 @@ pub struct StarkVerifyTask<'a> {
     pub stark_domains: &'a StarkDomains,
 }
 
-impl<'a> Task for StarkVerifyTask<'a> {
+impl Task for StarkVerifyTask<'_> {
     fn execute(&mut self) -> TaskResult {
         // stark_verify::<Layout>(
         //     self.cache,
@@ -82,7 +82,7 @@ impl<'a> Task for StarkVerifyTask<'a> {
             *n_interaction_columns,
             public_input,
             &eval_info,
-            &points,
+            points,
             &witness.traces_decommitment,
             &witness.composition_decommitment,
         );
@@ -120,7 +120,7 @@ impl<'a> StarkVerifyTask<'a> {
             n_original_columns: intermediate.verify.n_original_columns,
             n_interaction_columns: intermediate.verify.n_interaction_columns,
             public_input: &proof.public_input,
-            queries: &intermediate.verify.queries.as_slice(),
+            queries: intermediate.verify.queries.as_slice(),
             commitment: &intermediate.verify.stark_commitment,
             witness: &mut proof.witness,
             stark_domains: &intermediate.verify.stark_domains,

@@ -1,5 +1,4 @@
 use swiftness::commit::powers_array;
-use swiftness::commit::stark_commit;
 use swiftness::config::StarkConfig;
 use swiftness::oods::verify_oods;
 use swiftness::swiftness_fri::fri::fri_commit;
@@ -30,7 +29,7 @@ pub struct StarkCommitTask<'a> {
     stark_domains: &'a StarkDomains,
 }
 
-impl<'a> Task for StarkCommitTask<'a> {
+impl Task for StarkCommitTask<'_> {
     // stark_commit()
     fn execute(&mut self) -> TaskResult {
         let StarkCommitTask {
@@ -44,7 +43,7 @@ impl<'a> Task for StarkCommitTask<'a> {
         } = self;
 
         let traces_commitment =
-            Layout::traces_commit(transcript, &unsent_commitment.traces, config.traces.clone());
+            Layout::traces_commit(transcript, &unsent_commitment.traces, config.traces);
 
         // Generate interaction values after traces commitment.
         let composition_alpha = transcript.random_felt_to_prover();
@@ -66,7 +65,7 @@ impl<'a> Task for StarkCommitTask<'a> {
         let composition_commitment = table_commit(
             transcript,
             unsent_commitment.composition,
-            config.composition.clone(),
+            config.composition,
         );
 
         // Generate interaction values after composition.
@@ -81,7 +80,7 @@ impl<'a> Task for StarkCommitTask<'a> {
             unsent_commitment.oods_values.as_slice(),
             &traces_commitment.interaction_elements,
             public_input,
-            &traces_coefficients,
+            traces_coefficients,
             &interaction_after_composition,
             &stark_domains.trace_domain_size,
             &stark_domains.trace_generator,
@@ -102,11 +101,7 @@ impl<'a> Task for StarkCommitTask<'a> {
         let oods_coefficients = cache.powers_array.powers_array.unchecked_slice(n);
 
         // Read fri commitment.
-        let fri_commitment = fri_commit(
-            transcript,
-            unsent_commitment.fri.clone(),
-            config.fri.clone(),
-        );
+        let fri_commitment = fri_commit(transcript, unsent_commitment.fri, config.fri);
 
         // Proof of work commitment phase.
         unsent_commitment
@@ -130,7 +125,7 @@ impl<'a> Task for StarkCommitTask<'a> {
         *fri = fri_commitment;
 
         oods_values.overwrite(unsent_commitment.oods_values.as_slice());
-        interaction_after_oods.overwrite(&oods_coefficients);
+        interaction_after_oods.overwrite(oods_coefficients);
 
         Ok(vec![])
     }

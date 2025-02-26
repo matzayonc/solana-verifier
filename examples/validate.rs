@@ -9,9 +9,9 @@ use solana_sdk::{
     signer::{EncodableKey, Signer},
     transaction::Transaction,
 };
-use solana_verifier::{Entrypoint, ProofAccount, PROGRAM_ID};
+use solana_verifier::{Entrypoint, PROGRAM_ID, ProofAccount};
 use std::{path::PathBuf, str::FromStr};
-use swiftness::{parse, types::StarkProof, TransformTo};
+use swiftness::{TransformTo, parse, types::StarkProof};
 
 #[derive(Debug, Deserialize)]
 #[non_exhaustive]

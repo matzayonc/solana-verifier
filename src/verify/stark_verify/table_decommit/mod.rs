@@ -28,7 +28,7 @@ pub struct TableDecommitCache {
     pub commitment: CacheCommitment, // TODO: minimize this;
 }
 
-impl<'a> Task for TableDecommitTask<'a> {
+impl Task for TableDecommitTask<'_> {
     fn execute(&mut self) -> TaskResult {
         table_decommit(
             &mut self.cache.commitment,
