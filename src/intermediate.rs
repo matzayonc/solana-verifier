@@ -4,7 +4,7 @@ use swiftness::{
 };
 use swiftness_air::{Transcript, domains::StarkDomains};
 
-use crate::verify::stark_commit::StarkCommitIntermediate;
+use crate::verify::{stark_commit::StarkCommitIntermediate, stark_verify::StarkVerifyIntermediate};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
@@ -12,6 +12,7 @@ pub struct Intermediate {
     pub verify: VerifyIntermediate,
     pub verify_output: VerifyOutputIntermediate,
     pub stark_commit: StarkCommitIntermediate,
+    pub stark_verify: StarkVerifyIntermediate,
 }
 
 impl Intermediate {

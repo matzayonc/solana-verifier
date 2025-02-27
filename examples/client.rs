@@ -201,7 +201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data: bincode::serialize(&Entrypoint::VerifyProof {}).unwrap(),
     };
 
-    let mut verify_ixs = (0..7).map(|_| verify_ix.clone()).collect::<Vec<_>>();
+    let mut verify_ixs = (0..15).map(|_| verify_ix.clone()).collect::<Vec<_>>();
     verify_ixs.insert(0, schedule_ix);
 
     let blockhash = client.get_latest_blockhash().await.unwrap();

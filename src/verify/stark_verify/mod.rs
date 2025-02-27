@@ -1,9 +1,8 @@
+use swiftness::funvec::FunVec;
 use swiftness::oods::OodsEvaluationInfo;
 use swiftness::oods::eval_oods_boundary_poly_at_points;
 use swiftness::queries::queries_to_points;
 use swiftness::stark::CacheCommitment;
-use swiftness::swiftness_fri::fri::fri_verify;
-use swiftness::swiftness_fri::types;
 use swiftness::types::CacheStark;
 use swiftness::types::Felt;
 use swiftness::types::StarkCommitment;
@@ -19,6 +18,7 @@ use crate::intermediate::Intermediate;
 use crate::task::Task;
 use crate::task::Tasks;
 
+pub mod fri_verify;
 pub mod table_decommit;
 
 pub struct StarkVerifyTask<'a> {
@@ -30,22 +30,18 @@ pub struct StarkVerifyTask<'a> {
     pub commitment: &'a StarkCommitment,
     pub witness: &'a mut StarkWitness,
     pub stark_domains: &'a StarkDomains,
+    pub intermediate: &'a mut StarkVerifyIntermediate,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct StarkVerifyIntermediate {
+    pub points: FunVec<Felt, 256>,
+    pub evaluations: FunVec<Felt, 256>,
 }
 
 impl Task for StarkVerifyTask<'_> {
+    // stark_verify::<Layout>(
     fn execute(&mut self) {
-        // stark_verify::<Layout>(
-        //     self.cache,
-        //     self.n_original_columns,
-        //     self.n_interaction_columns,
-        //     self.public_input,
-        //     self.queries,
-        //     self.commitment,
-        //     self.witness,
-        //     self.stark_domains,
-        // )
-        // .unwrap();
-
         let StarkVerifyTask {
             cache,
             n_original_columns,
@@ -55,18 +51,18 @@ impl Task for StarkVerifyTask<'_> {
             commitment,
             witness,
             stark_domains,
+            intermediate,
         } = self;
 
-        let CacheCommitment {
-            points, eval_oods, ..
-        } = &mut cache.commitment;
+        let CacheCommitment { eval_oods, .. } = &mut cache.commitment;
+        let StarkVerifyIntermediate {
+            points,
+            evaluations,
+        } = intermediate;
+        let points = points.to_size_uninitialized(queries.len());
 
         // Compute query points.
-        let points = queries_to_points(
-            points.unchecked_slice_mut(queries.len()),
-            queries,
-            stark_domains,
-        );
+        let points = queries_to_points(points, queries, stark_domains);
 
         // Evaluate the FRI input layer at query points.
         let eval_info = OodsEvaluationInfo {
@@ -75,8 +71,10 @@ impl Task for StarkVerifyTask<'_> {
             trace_generator: &stark_domains.trace_generator,
             constraint_coefficients: commitment.interaction_after_oods.as_slice(),
         };
-        let oods_poly_evals = eval_oods_boundary_poly_at_points::<Layout>(
+        let evaluations = evaluations.to_size_uninitialized(points.len());
+        let _oods_poly_evals = eval_oods_boundary_poly_at_points::<Layout>(
             eval_oods,
+            evaluations,
             *n_original_columns,
             *n_interaction_columns,
             public_input,
@@ -85,20 +83,6 @@ impl Task for StarkVerifyTask<'_> {
             &witness.traces_decommitment,
             &witness.composition_decommitment,
         );
-
-        // Decommit FRI.
-        let fri_decommitment = types::DecommitmentRef {
-            values: oods_poly_evals,
-            points,
-        };
-        fri_verify(
-            &mut cache.fri,
-            queries,
-            &commitment.fri,
-            &fri_decommitment,
-            &mut witness.fri_witness,
-        )
-        .unwrap();
     }
 
     fn children(&self) -> Vec<Tasks> {
@@ -106,6 +90,7 @@ impl Task for StarkVerifyTask<'_> {
             Tasks::TableDecommit(TableDecommitTarget::Original),
             Tasks::TableDecommit(TableDecommitTarget::Interaction),
             Tasks::TableDecommit(TableDecommitTarget::Composition),
+            Tasks::StarkVerifyFri,
         ]
     }
 }
@@ -125,6 +110,7 @@ impl<'a> StarkVerifyTask<'a> {
             commitment: &intermediate.verify.stark_commitment,
             witness: &mut proof.witness,
             stark_domains: &intermediate.verify.stark_domains,
+            intermediate: &mut intermediate.stark_verify,
         }
     }
 }

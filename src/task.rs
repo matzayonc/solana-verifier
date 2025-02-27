@@ -7,6 +7,9 @@ use crate::verify::stark_commit::{
     StarkCommitAssignTask, StarkCommitFriTask, StarkCommitOodsCoefTask, StarkCommitTask,
 };
 use crate::verify::stark_verify::StarkVerifyTask;
+use crate::verify::stark_verify::fri_verify::StarkVerifyFriTask;
+use crate::verify::stark_verify::fri_verify::fri_verify_layers::StarkVerifyLayersTask;
+use crate::verify::stark_verify::fri_verify::last_layer::StarkVerifyLastLayerTask;
 use crate::verify::stark_verify::table_decommit::{TableDecommitTarget, TableDecommitTask};
 use crate::verify::verify_output::VerifyOutputTask;
 use crate::{intermediate::Intermediate, verify::VerifyProofTask};
@@ -24,6 +27,9 @@ pub enum Tasks {
     StarkCommitFri = 7,
     StarkCommitAssign = 8,
     GenerateQueries = 9,
+    StarkVerifyFri = 10,
+    StarkVerifyLayersTask = 11,
+    StarkVerifyLastLayerTask = 12,
 }
 
 pub type RawTask = [u8; 4];
@@ -60,6 +66,13 @@ impl Tasks {
             Tasks::StarkCommitAssign => {
                 Box::new(StarkCommitAssignTask::view(proof, cache, intermediate))
             }
+            Tasks::StarkVerifyFri => Box::new(StarkVerifyFriTask::view(proof, cache, intermediate)),
+            Tasks::StarkVerifyLayersTask => {
+                Box::new(StarkVerifyLayersTask::view(proof, cache, intermediate))
+            }
+            Tasks::StarkVerifyLastLayerTask => {
+                Box::new(StarkVerifyLastLayerTask::view(proof, cache, intermediate))
+            }
         }
     }
 }
@@ -80,6 +93,9 @@ impl TryFrom<&RawTask> for Tasks {
             7 => Tasks::StarkCommitFri,
             8 => Tasks::StarkCommitAssign,
             9 => Tasks::GenerateQueries,
+            10 => Tasks::StarkVerifyFri,
+            11 => Tasks::StarkVerifyLayersTask,
+            12 => Tasks::StarkVerifyLastLayerTask,
             _ => return Err(ProgramError::Custom(2)),
         })
     }
@@ -97,6 +113,9 @@ impl From<Tasks> for RawTask {
             Tasks::StarkCommitFri => [7, 0, 0, 0],
             Tasks::StarkCommitAssign => [8, 0, 0, 0],
             Tasks::GenerateQueries => [9, 0, 0, 0],
+            Tasks::StarkVerifyFri => [10, 0, 0, 0],
+            Tasks::StarkVerifyLayersTask => [11, 0, 0, 0],
+            Tasks::StarkVerifyLastLayerTask => [12, 0, 0, 0],
         }
     }
 }

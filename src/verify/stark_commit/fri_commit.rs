@@ -22,7 +22,12 @@ impl Task for StarkCommitFriTask<'_> {
             unsent_commitment,
             ..
         } = &mut self.parent;
-        intermediate.fri_commitment = fri_commit(transcript, unsent_commitment.fri, config.fri);
+        fri_commit(
+            &mut intermediate.fri_commitment,
+            transcript,
+            &unsent_commitment.fri,
+            &config.fri,
+        );
     }
 
     fn children(&self) -> Vec<Tasks> {
