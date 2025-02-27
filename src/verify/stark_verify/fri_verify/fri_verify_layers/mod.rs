@@ -1,6 +1,4 @@
-use swiftness::swiftness_fri::fri::fri_verify_layers;
-use swiftness::swiftness_fri::group::get_fri_group;
-use swiftness::types::Felt;
+use swiftness::funvec;
 use swiftness::types::StarkProof;
 
 use crate::Cache;
@@ -10,42 +8,52 @@ use crate::task::Tasks;
 
 use super::StarkVerifyFriTask;
 
+pub mod layer;
+
 pub struct StarkVerifyLayersTask<'a> {
     parent: StarkVerifyFriTask<'a>,
 }
 
 impl Task for StarkVerifyLayersTask<'_> {
-    // fri_verify(
+    // fri_verify_layers(
     fn execute(&mut self) {
         // Original
 
-        let StarkVerifyFriTask {
-            cache,
-            commitment,
-            witness,
-            ..
-        } = &mut self.parent;
+        // let StarkVerifyFriTask {
+        //     cache,
+        //     commitment,
+        //     witness,
+        //     ..
+        // } = &mut self.parent;
 
-        // Compute fri_group.
-        let fri_group: &[Felt; 16] = &get_fri_group();
+        // // Compute fri_group.
+        // let fri_group: &[Felt; 16] = &get_fri_group();
+        // let fri_step_sizes = commitment.config.fri_step_sizes.as_slice();
 
-        let fri_step_sizes = commitment.config.fri_step_sizes.as_slice();
+        // // Prepare params
+        // let n_layers = commitment.config.n_layers - 1;
+        // let eval_points = commitment.eval_points.as_slice();
+        // let commitment = commitment.inner_layers.as_slice();
+        // let layer_witness = witness.layers.as_slice_mut();
+        // let step_sizes = &fri_step_sizes[1..fri_step_sizes.len()];
 
         // Verify inner layers.
-        let _last_queries = fri_verify_layers(
-            cache,
-            fri_group,
-            commitment.config.n_layers - 1,
-            commitment.inner_layers.as_slice(),
-            witness.layers.as_slice_mut(),
-            commitment.eval_points.as_slice(),
-            &fri_step_sizes[1..fri_step_sizes.len()],
-            // fri_queries,
-        );
+        // let _last_queries = fri_verify_layers(
+        //     cache,
+        //     fri_group,
+        //     n_layers,
+        //     commitment,
+        //     layer_witness,
+        //     eval_points,
+        //     step_sizes,
+        // );
     }
 
     fn children(&self) -> Vec<Tasks> {
-        vec![]
+        let n_layers = funvec::cast_felt(&self.parent.config.n_layers) as usize;
+        (0..(n_layers - 1))
+            .map(|i| Tasks::StarkVerifyFriLayer(i))
+            .collect()
     }
 }
 

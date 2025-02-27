@@ -40,6 +40,21 @@ pub struct ProofAccount {
     pub schedule: Schedule<RawTask, 1000>, // Tasks remaining to be executed.
 }
 
+impl ProofAccount {
+    pub fn fill_schedule(&mut self) {
+        let ProofAccount {
+            schedule,
+            proof,
+            cache,
+            intermediate,
+        } = self;
+
+        schedule.flush();
+        schedule.push(Tasks::VerifyProofWithoutStark.into());
+        schedule.generate_tasks(proof, cache, intermediate);
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, Zeroable, Pod, PartialEq)]
 #[repr(C)]
 pub struct Cache {
@@ -110,32 +125,10 @@ pub fn process_instruction(
                 return Err(ProgramError::Custom(8));
             }
 
-            let ProofAccount {
-                schedule,
-                proof,
-                cache,
-                intermediate,
-            } = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
-
-            schedule.flush();
-            schedule.push(Tasks::VerifyProofWithoutStark.into());
-
             msg!("Schedule");
 
-            let mut queue = VecDeque::new();
-            queue.push_back(Tasks::VerifyProofWithoutStark);
-
-            while let Some(task) = queue.pop_front() {
-                // Add the current task to schedule
-                schedule.push(task.into());
-                let task_view = task.view(proof, cache, intermediate);
-                let children = task_view.children();
-
-                // Add the children in a stack-like manner
-                for child in children.into_iter().rev() {
-                    queue.push_front(child);
-                }
-            }
+            let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
+            proof_account.fill_schedule();
 
             VerificationStage::Verify
         }
@@ -223,6 +216,15 @@ mod tests {
     }
 
     #[test]
+    fn test_get_needed_tx() {
+        let account_data = &mut read_proof_from_file()[..];
+        let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
+        proof_account.fill_schedule();
+        let needed_tx = proof_account.schedule.remaining();
+        assert_eq!(needed_tx, 23);
+    }
+
+    #[test]
     fn test_deserialize_proof() {
         let account_data = &mut read_proof_from_file()[..];
 
@@ -236,7 +238,7 @@ mod tests {
             c += 1;
         }
 
-        assert_eq!(c, 15);
+        assert_eq!(c, 23);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 

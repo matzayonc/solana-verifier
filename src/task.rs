@@ -9,6 +9,7 @@ use crate::verify::stark_commit::{
 use crate::verify::stark_verify::StarkVerifyTask;
 use crate::verify::stark_verify::fri_verify::StarkVerifyFriTask;
 use crate::verify::stark_verify::fri_verify::fri_verify_layers::StarkVerifyLayersTask;
+use crate::verify::stark_verify::fri_verify::fri_verify_layers::layer::StarkVerifyLayerTask;
 use crate::verify::stark_verify::fri_verify::last_layer::StarkVerifyLastLayerTask;
 use crate::verify::stark_verify::table_decommit::{TableDecommitTarget, TableDecommitTask};
 use crate::verify::verify_output::VerifyOutputTask;
@@ -30,6 +31,7 @@ pub enum Tasks {
     StarkVerifyFri = 10,
     StarkVerifyLayersTask = 11,
     StarkVerifyLastLayerTask = 12,
+    StarkVerifyFriLayer(usize) = 13,
 }
 
 pub type RawTask = [u8; 4];
@@ -73,6 +75,9 @@ impl Tasks {
             Tasks::StarkVerifyLastLayerTask => {
                 Box::new(StarkVerifyLastLayerTask::view(proof, cache, intermediate))
             }
+            Tasks::StarkVerifyFriLayer(i) => {
+                Box::new(StarkVerifyLayerTask::view(i, proof, cache, intermediate))
+            }
         }
     }
 }
@@ -96,6 +101,7 @@ impl TryFrom<&RawTask> for Tasks {
             10 => Tasks::StarkVerifyFri,
             11 => Tasks::StarkVerifyLayersTask,
             12 => Tasks::StarkVerifyLastLayerTask,
+            13 => Tasks::StarkVerifyFriLayer(tail[0] as usize),
             _ => return Err(ProgramError::Custom(2)),
         })
     }
@@ -116,6 +122,7 @@ impl From<Tasks> for RawTask {
             Tasks::StarkVerifyFri => [10, 0, 0, 0],
             Tasks::StarkVerifyLayersTask => [11, 0, 0, 0],
             Tasks::StarkVerifyLastLayerTask => [12, 0, 0, 0],
+            Tasks::StarkVerifyFriLayer(i) => [13, i as u8, 0, 0],
         }
     }
 }

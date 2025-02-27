@@ -201,7 +201,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data: bincode::serialize(&Entrypoint::VerifyProof {}).unwrap(),
     };
 
-    let mut verify_ixs = (0..15).map(|_| verify_ix.clone()).collect::<Vec<_>>();
+    let needed_tx = get_needed_tx(&stark_proof);
+    assert_eq!(needed_tx, 23);
+
+    let mut verify_ixs = (0..needed_tx + 1)
+        .map(|_| verify_ix.clone())
+        .collect::<Vec<_>>();
     verify_ixs.insert(0, schedule_ix);
 
     let blockhash = client.get_latest_blockhash().await.unwrap();
@@ -215,4 +220,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     client.send_and_confirm_transaction(&tx).await.unwrap();
 
     Ok(())
+}
+
+fn get_needed_tx(proof: &[u8]) -> usize {
+    let mut proof = proof.to_vec();
+    let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(&mut proof);
+    proof_account.fill_schedule();
+    proof_account.schedule.remaining()
 }

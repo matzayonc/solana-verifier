@@ -1,4 +1,6 @@
+use swiftness::FriConfig;
 use swiftness::swiftness_fri::FriVerifyCache;
+use swiftness::swiftness_fri::config::Config;
 use swiftness::swiftness_fri::first_layer::gather_first_layer_queries;
 use swiftness::swiftness_fri::fri::Error;
 use swiftness::swiftness_fri::types;
@@ -16,6 +18,7 @@ pub mod fri_verify_layers;
 pub mod last_layer;
 
 pub struct StarkVerifyFriTask<'a> {
+    config: &'a Config,
     cache: &'a mut FriVerifyCache,
     commitment: &'a types::Commitment,
     witness: &'a mut types::Witness,
@@ -84,6 +87,7 @@ impl<'a> StarkVerifyFriTask<'a> {
         let witness = &mut proof.witness.fri_witness;
 
         StarkVerifyFriTask {
+            config: &proof.config.fri,
             cache,
             queries: intermediate.verify.queries.as_slice(),
             commitment,
