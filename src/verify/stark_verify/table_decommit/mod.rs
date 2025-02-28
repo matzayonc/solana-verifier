@@ -11,7 +11,6 @@ use swiftness_air::swiftness_commitment::table::decommit::table_decommit;
 
 use crate::Cache;
 use crate::intermediate::Intermediate;
-use crate::task::RawTask;
 use crate::task::Task;
 use crate::task::Tasks;
 

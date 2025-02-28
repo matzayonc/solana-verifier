@@ -171,17 +171,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schedule_ix = Instruction {
         program_id,
         accounts: vec![AccountMeta::new(proof_data_account.pubkey(), false)],
-        data: bincode::serialize(&Entrypoint::Schedule {}).unwrap(),
+        data: bincode::serialize(&Entrypoint::Schedule).unwrap(),
     };
 
     let verify_ix = Instruction {
         program_id,
         accounts: vec![AccountMeta::new(proof_data_account.pubkey(), false)],
-        data: bincode::serialize(&Entrypoint::VerifyProof {}).unwrap(),
+        data: bincode::serialize(&Entrypoint::VerifyProof).unwrap(),
     };
 
     let needed_tx = get_needed_tx(&stark_proof);
-    assert_eq!(needed_tx, 31);
 
     let mut verify_ixs = (0..needed_tx + 1)
         .map(|_| verify_ix.clone())
@@ -205,6 +204,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn get_needed_tx(proof: &[u8]) -> usize {
     let mut proof = proof.to_vec();
     let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(&mut proof);
-    proof_account.fill_schedule();
-    proof_account.schedule.remaining()
+    proof_account.flow()
 }

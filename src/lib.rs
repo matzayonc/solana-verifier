@@ -39,17 +39,18 @@ pub struct ProofAccount {
 }
 
 impl ProofAccount {
-    pub fn flow(&mut self) {
-        let ProofAccount {
-            schedule,
-            proof,
-            cache,
-            intermediate,
-        } = self;
+    pub fn flow(&mut self) -> usize {
+        let account_data = bytemuck::bytes_of_mut(self);
+        let mut stage = VerificationStage::Publish;
+        stage = process_instruction(Entrypoint::Schedule, account_data, stage).unwrap();
 
-        schedule.flush();
-        schedule.push(Tasks::VerifyProofWithoutStark.into());
-        schedule.generate_tasks(proof, cache, intermediate);
+        let mut c = 0;
+        while stage != VerificationStage::Verified {
+            stage = process_instruction(Entrypoint::VerifyProof, account_data, stage).unwrap();
+            c += 1;
+        }
+
+        c
     }
 }
 
@@ -155,8 +156,8 @@ pub fn process_instruction(
             };
 
             let task = Tasks::try_from(&task)?;
-            let task_name = format!("{:?}", task);
-            msg!("Executing task: {}", task_name);
+            // let task_name = format!("{:?}", task);
+            // msg!("Executing task: {}", task_name);
 
             let mut task = task.view(proof, cache, intermediate);
             let children = task.execute();
@@ -183,17 +184,6 @@ pub fn process_instruction(
 mod tests {
     use super::*;
     use swiftness::{TransformTo, parse};
-
-    // pub fn read_proof() -> ProofAccount {
-    //     let small_json = include_str!("../resources/saya.json");
-    //     let stark_proof = parse(small_json).unwrap();
-    //     let proof = stark_proof.transform_to();
-
-    //     ProofAccount {
-    //         proof,
-    //         ..Default::default()
-    //     }
-    // }
 
     pub fn read_proof_from_file() -> Vec<u8> {
         let account_data = include_bytes!("../resources/proof.bin").to_vec();
@@ -227,17 +217,10 @@ mod tests {
     fn test_deserialize_proof() {
         let account_data = &mut read_proof_from_file()[..];
 
-        let mut stage = VerificationStage::Publish;
+        let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
+        let c = proof_account.flow();
 
-        stage = process_instruction(Entrypoint::Schedule, account_data, stage).unwrap();
-        let mut c = 0;
-
-        while stage != VerificationStage::Verified {
-            stage = process_instruction(Entrypoint::VerifyProof, account_data, stage).unwrap();
-            c += 1;
-        }
-
-        assert_eq!(c, 38);
+        assert_eq!(c, 54);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 

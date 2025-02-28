@@ -10,6 +10,8 @@ use crate::verify::stark_verify::StarkVerifyTask;
 use crate::verify::stark_verify::fri_verify::StarkVerifyFriTask;
 use crate::verify::stark_verify::fri_verify::fri_verify_layers::StarkVerifyLayersTask;
 use crate::verify::stark_verify::fri_verify::fri_verify_layers::assign_next::StarkVerifyLayerAssignNextTask;
+use crate::verify::stark_verify::fri_verify::fri_verify_layers::compute_next_layer::ComputeNextTask;
+use crate::verify::stark_verify::fri_verify::fri_verify_layers::decommitment_mont::StarkVerifyLayerDecommitmentMontTask;
 use crate::verify::stark_verify::fri_verify::fri_verify_layers::layer::StarkVerifyLayerTask;
 use crate::verify::stark_verify::fri_verify::last_layer::StarkVerifyLastLayerTask;
 use crate::verify::stark_verify::table_decommit::{TableDecommitTarget, TableDecommitTask};
@@ -34,6 +36,8 @@ pub enum Tasks {
     StarkVerifyLastLayerTask = 12,
     StarkVerifyFriLayer(usize) = 13,
     StarkVerifyLayerAssignNext = 14,
+    StarkVerifyLayerDecommitmentMont(usize) = 15,
+    ComputeNextLayer(usize) = 16,
 }
 
 pub type RawTask = [u8; 4];
@@ -85,6 +89,12 @@ impl Tasks {
                 cache,
                 intermediate,
             )),
+            Tasks::StarkVerifyLayerDecommitmentMont(i) => Box::new(
+                StarkVerifyLayerDecommitmentMontTask::view(i, proof, cache, intermediate),
+            ),
+            Tasks::ComputeNextLayer(i) => {
+                Box::new(ComputeNextTask::view(i, proof, cache, intermediate))
+            }
         }
     }
 }
@@ -110,6 +120,8 @@ impl TryFrom<&RawTask> for Tasks {
             12 => Tasks::StarkVerifyLastLayerTask,
             13 => Tasks::StarkVerifyFriLayer(tail[0] as usize),
             14 => Tasks::StarkVerifyLayerAssignNext,
+            15 => Tasks::StarkVerifyLayerDecommitmentMont(tail[0] as usize),
+            16 => Tasks::ComputeNextLayer(tail[0] as usize),
             _ => return Err(ProgramError::Custom(2)),
         })
     }
@@ -138,6 +150,8 @@ impl From<Tasks> for RawTask {
             Tasks::StarkVerifyLastLayerTask => [12, 0, 0, 0],
             Tasks::StarkVerifyFriLayer(i) => [13, i as u8, 0, 0],
             Tasks::StarkVerifyLayerAssignNext => [14, 0, 0, 0],
+            Tasks::StarkVerifyLayerDecommitmentMont(i) => [15, i as u8, 0, 0],
+            Tasks::ComputeNextLayer(i) => [16, i as u8, 0, 0],
         }
     }
 }

@@ -6,8 +6,6 @@ use swiftness::swiftness_fri::layer::FriLayerComputationParams;
 use swiftness::swiftness_fri::layer::compute_next_layer;
 use swiftness::types::Felt;
 use swiftness::types::StarkProof;
-use swiftness_air::swiftness_commitment::table::decommit::MONTGOMERY_R;
-use swiftness_air::swiftness_commitment::table::decommit::table_decommit;
 
 use crate::Cache;
 use crate::intermediate::Intermediate;
@@ -41,60 +39,27 @@ impl Task for StarkVerifyLayerTask<'_> {
         let FriVerifyCache {
             fri_queries,
             next_layer_cache,
-            decommitment,
             ..
         } = cache;
 
         let Some(StarkVerifyLayerContext {
             target_layer_witness_leaves,
-            target_layer_witness_table_withness,
-            target_commitment,
             params,
+            ..
         }) = context
         else {
             panic!("Not enough data in context");
         };
-
-        // Compute next layer queries.
-        compute_next_layer(
-            next_layer_cache,
-            fri_queries,
-            target_layer_witness_leaves,
-            params.clone(),
-        )
-        .unwrap();
-
-        let ComputeNextLayerCache {
-            verify_indices,
-            verify_y_values,
-            ..
-        } = next_layer_cache;
-
-        decommitment.values.flush();
-        decommitment.montgomery_values.flush();
-        decommitment.values.extend(verify_y_values.as_slice());
-        for i in 0..verify_y_values.len() {
-            decommitment
-                .montgomery_values
-                .push(verify_y_values.get(i).unwrap() * MONTGOMERY_R);
-        }
-
-        // Table decommitment.
-        // let _ = table_decommit(
-        //     &mut cache.commitment,
-        //     &target_commitment,
-        //     verify_indices.as_slice(),
-        //     &decommitment,
-        //     &target_layer_witness_table_withness,
-        // );
 
         self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {
         vec![
-            Tasks::StarkVerifyLayerAssignNext,
+            Tasks::ComputeNextLayer(self.layer_index),
+            Tasks::StarkVerifyLayerDecommitmentMont(self.layer_index),
             Tasks::TableDecommit(TableDecommitTarget::Fri(self.layer_index as u8)),
+            Tasks::StarkVerifyLayerAssignNext,
         ]
     }
 }

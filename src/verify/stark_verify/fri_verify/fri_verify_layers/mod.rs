@@ -9,6 +9,8 @@ use crate::task::Tasks;
 use super::StarkVerifyFriTask;
 
 pub mod assign_next;
+pub mod compute_next_layer;
+pub mod decommitment_mont;
 pub mod layer;
 
 pub struct StarkVerifyLayersTask<'a> {

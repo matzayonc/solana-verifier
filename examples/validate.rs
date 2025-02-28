@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ix = Instruction {
         program_id: Pubkey::from_str(PROGRAM_ID)?,
         accounts: vec![AccountMeta::new(data_address, false)],
-        data: bincode::serialize(&Entrypoint::VerifyProof {}).unwrap(),
+        data: bincode::serialize(&Entrypoint::VerifyProof).unwrap(),
     };
 
     let blockhash = client.get_latest_blockhash().await?;
