@@ -8,6 +8,7 @@ use crate::task::Tasks;
 
 use super::StarkVerifyFriTask;
 
+pub mod assign_next;
 pub mod layer;
 
 pub struct StarkVerifyLayersTask<'a> {

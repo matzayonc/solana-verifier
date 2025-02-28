@@ -1,6 +1,7 @@
+use swiftness::funvec::FunVec;
 use swiftness::swiftness_fri::ComputeNextLayerCache;
 use swiftness::swiftness_fri::FriVerifyCache;
-use swiftness::swiftness_fri::group::get_fri_group;
+use swiftness::swiftness_fri::group::FRI_GROUP;
 use swiftness::swiftness_fri::layer::FriLayerComputationParams;
 use swiftness::swiftness_fri::layer::compute_next_layer;
 use swiftness::types::Felt;
@@ -13,11 +14,16 @@ use crate::intermediate::Intermediate;
 use crate::task::Task;
 use crate::task::Tasks;
 
-use super::StarkVerifyFriTask;
-
 pub struct StarkVerifyLayerTask<'a> {
-    parent: StarkVerifyFriTask<'a>,
-    layer_index: usize,
+    pub cache: &'a mut FriVerifyCache,
+    pub context: Option<StarkVerifyLayerContext<'a>>,
+}
+
+pub struct StarkVerifyLayerContext<'a> {
+    pub target_layer_witness_leaves: &'a mut FunVec<Felt, 512>,
+    pub target_layer_witness_table_withness: &'a swiftness_air::Witness,
+    pub target_commitment: &'a swiftness_air::Commitment,
+    pub params: FriLayerComputationParams<'a>,
 }
 
 impl Task for StarkVerifyLayerTask<'_> {
@@ -25,34 +31,7 @@ impl Task for StarkVerifyLayerTask<'_> {
     fn execute(&mut self) {
         // Original
 
-        let StarkVerifyFriTask {
-            cache,
-            commitment,
-            witness,
-            ..
-        } = &mut self.parent;
-
-        // Compute fri_group.
-        let fri_group: &[Felt; 16] = &get_fri_group();
-        let fri_step_sizes = commitment.config.fri_step_sizes.as_slice();
-
-        // Prepare params
-        // let n_layers = commitment.config.n_layers - 1;
-        let eval_points = commitment.eval_points.as_slice();
-        let commitment = commitment.inner_layers.as_slice();
-        let layer_witness = witness.layers.as_slice_mut();
-        let step_sizes = &fri_step_sizes[1..fri_step_sizes.len()];
-
-        // Verify inner layers.
-        // let _last_queries = fri_verify_layers(
-        //     cache,
-        //     fri_group,
-        //     n_layers,
-        //     commitment,
-        //     layer_witness,
-        //     eval_points,
-        //     step_sizes,
-        // );
+        let Self { cache, context, .. } = self;
 
         let FriVerifyCache {
             fri_queries,
@@ -61,21 +40,14 @@ impl Task for StarkVerifyLayerTask<'_> {
             ..
         } = cache;
 
-        let i = self.layer_index;
-
-        // let len: usize = funvec::cast_felt(&n_layers) as usize;
-        // for i in 0..len {
-        let target_layer_witness = layer_witness.get_mut(i).unwrap();
-        let target_layer_witness_leaves = &mut target_layer_witness.leaves;
-        let target_layer_witness_table_withness = &target_layer_witness.table_witness;
-        let target_commitment = commitment.get(i).unwrap();
-
-        // Params.
-        let coset_size = Felt::TWO.pow_felt(step_sizes.get(i).unwrap());
-        let params = FriLayerComputationParams {
-            coset_size: &coset_size,
-            fri_group,
-            eval_point: eval_points.get(i).unwrap(),
+        let Some(StarkVerifyLayerContext {
+            target_layer_witness_leaves,
+            target_layer_witness_table_withness,
+            target_commitment,
+            params,
+        }) = context
+        else {
+            panic!("Not enough data in context");
         };
 
         // Compute next layer queries.
@@ -83,11 +55,11 @@ impl Task for StarkVerifyLayerTask<'_> {
             next_layer_cache,
             fri_queries,
             target_layer_witness_leaves,
-            params,
+            params.clone(),
         )
         .unwrap();
+
         let ComputeNextLayerCache {
-            next_queries,
             verify_indices,
             verify_y_values,
             ..
@@ -110,14 +82,10 @@ impl Task for StarkVerifyLayerTask<'_> {
             &decommitment,
             &target_layer_witness_table_withness,
         );
-
-        fri_queries.flush();
-        fri_queries.extend(next_queries.as_slice());
-        // }
     }
 
     fn children(&self) -> Vec<Tasks> {
-        vec![]
+        vec![Tasks::StarkVerifyLayerAssignNext]
     }
 }
 
@@ -128,9 +96,44 @@ impl<'a> StarkVerifyLayerTask<'a> {
         cache: &'a mut Cache,
         intermediate: &'a mut Intermediate,
     ) -> Self {
-        StarkVerifyLayerTask {
-            parent: StarkVerifyFriTask::view(proof, cache, intermediate),
-            layer_index,
-        }
+        let cache = &mut cache.legacy.stark.fri;
+        let commitment = &intermediate.verify.stark_commitment.fri;
+        let witness = &mut proof.witness.fri_witness;
+
+        let fri_step_sizes = commitment.config.fri_step_sizes.as_slice();
+
+        let eval_points = commitment.eval_points.as_slice();
+        let commitment_layer = commitment.inner_layers.as_slice();
+        let layer_witness = witness.layers.as_slice_mut();
+
+        let context = if fri_step_sizes.len() != 0 {
+            let step_sizes = &fri_step_sizes[1..fri_step_sizes.len()];
+
+            let target_layer_witness = layer_witness.get_mut(layer_index).unwrap();
+            let target_layer_witness_leaves = &mut target_layer_witness.leaves;
+            let target_layer_witness_table_withness = &target_layer_witness.table_witness;
+            let target_commitment = commitment_layer.get(layer_index).unwrap();
+
+            // Params.
+            let coset_size = Felt::TWO.pow_felt(step_sizes.get(layer_index).unwrap());
+            let params = FriLayerComputationParams {
+                coset_size,
+                fri_group: &FRI_GROUP,
+                eval_point: *eval_points.get(layer_index).unwrap(),
+            };
+
+            let context = StarkVerifyLayerContext {
+                target_layer_witness_leaves,
+                target_layer_witness_table_withness,
+                target_commitment,
+                params,
+            };
+
+            Some(context)
+        } else {
+            None
+        };
+
+        StarkVerifyLayerTask { cache, context }
     }
 }

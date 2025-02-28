@@ -1,10 +1,9 @@
-use futures::{StreamExt, stream::FuturesUnordered};
 use serde::Deserialize;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signature::{Keypair, Signature},
+    signature::Keypair,
     signer::{EncodableKey, Signer},
     system_instruction,
     transaction::Transaction,
@@ -15,28 +14,41 @@ use tokio::fs;
 
 const CHUNK_SIZE: usize = 500;
 
-async fn send_transactions(
-    client: &RpcClient,
-    transactions: &[Transaction],
-) -> Vec<Result<Signature, solana_rpc_client_api::client_error::Error>> {
-    let mut futures = FuturesUnordered::new();
+async fn send_transactions(config: &SolanaConfig, instructions: &[Instruction]) {
+    let mut handles = Vec::new();
+    for (i, instruction) in instructions.iter().enumerate() {
+        let instruction = instruction.clone();
+        let (client, payer) = config.get_client();
 
-    for (idx, tx) in transactions.iter().enumerate() {
-        sleep(Duration::from_millis(100));
-        // Wrap each transaction in a future and track the result
-        let future = async move { (idx, client.send_transaction(tx).await) };
-        futures.push(future);
+        handles.push(tokio::spawn(async move {
+            loop {
+                let blockhash = client
+                    .get_latest_blockhash()
+                    .await
+                    .expect("failed to connect to rpc");
+
+                // Create corresponding transactions
+                let tx = Transaction::new_signed_with_payer(
+                    &[instruction.clone()],
+                    Some(&payer.pubkey()),
+                    &[&payer],
+                    blockhash,
+                );
+
+                let result = client.send_transaction(&tx).await;
+
+                if result.is_ok() {
+                    break;
+                }
+
+                println!("Failed to send transaction: {i}, repeating.");
+            }
+        }));
     }
 
-    let mut results = Vec::new();
+    futures::future::join_all(handles).await;
 
-    while let Some(res) = futures.next().await {
-        results.push(res.1)
-    }
-
-    println!("Results: {:?}", results);
-
-    results
+    println!("Sent publish instructions");
 }
 
 pub async fn read_proof_account() -> Box<ProofAccount> {
@@ -82,6 +94,14 @@ struct SolanaConfig {
     keypair_path: PathBuf,
 }
 
+impl SolanaConfig {
+    pub fn get_client(&self) -> (RpcClient, Keypair) {
+        let client = RpcClient::new(self.json_rpc_url.clone());
+        let payer = Keypair::read_from_file(self.keypair_path.clone()).unwrap();
+        (client, payer)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize components
@@ -89,8 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(std::env::var("HOME").unwrap()).join(".config/solana/cli/config.yml");
 
     let config: SolanaConfig = serde_yaml::from_reader(std::fs::File::open(config)?)?;
-    let client = RpcClient::new(config.json_rpc_url.clone());
-    let payer = Keypair::read_from_file(config.keypair_path)?;
+    let (client, payer) = config.get_client();
 
     println!("Using keypair {}, at {}", payer.pubkey(), client.url());
 
@@ -131,49 +150,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .collect::<Vec<_>>();
 
+    send_transactions(&config, &instructions).await;
+
     println!("Prepared instructions");
-
-    let mut handles = Vec::new();
-    for instructions in instructions.chunks(10) {
-        let instructions = instructions.to_vec();
-        let client = RpcClient::new(config.json_rpc_url.clone());
-        let payer = Keypair::from_bytes(&payer.to_bytes()).unwrap();
-
-        handles.push(tokio::spawn(async move {
-            loop {
-                let blockhash = client
-                    .get_latest_blockhash()
-                    .await
-                    .expect("failed to connect to rpc");
-
-                // Create corresponding transactions
-                let transactions = instructions
-                    .iter()
-                    .map(|instruction| {
-                        Transaction::new_signed_with_payer(
-                            &[instruction.clone()],
-                            Some(&payer.pubkey()),
-                            &[&payer],
-                            blockhash,
-                        )
-                    })
-                    .collect::<Vec<_>>();
-
-                let results = send_transactions(&client, &transactions).await;
-                if results.iter().all(|r| r.is_ok()) {
-                    break;
-                }
-
-                println!("Failed to send transactions, repeating batch.");
-            }
-        }));
-    }
-
-    for handle in handles {
-        handle.await?;
-    }
-
-    println!("Sent publish instructions");
 
     loop {
         let data = client
@@ -202,7 +181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let needed_tx = get_needed_tx(&stark_proof);
-    assert_eq!(needed_tx, 23);
+    assert_eq!(needed_tx, 31);
 
     let mut verify_ixs = (0..needed_tx + 1)
         .map(|_| verify_ix.clone())
@@ -210,14 +189,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     verify_ixs.insert(0, schedule_ix);
 
     let blockhash = client.get_latest_blockhash().await.unwrap();
-    let tx = Transaction::new_signed_with_payer(
-        &verify_ixs,
-        Some(&payer.pubkey()),
-        &[&payer],
-        blockhash,
-    );
+    let transactions =
+    //  verify_ixs.iter().map(|ix| {
+    [Transaction::new_signed_with_payer(&verify_ixs, Some(&payer.pubkey()), &[&payer], blockhash)];
+    // });
 
-    client.send_and_confirm_transaction(&tx).await.unwrap();
+    for (i, tx) in transactions.into_iter().enumerate() {
+        println!("Sending transaction: {i}");
+        client.send_and_confirm_transaction(&tx).await.unwrap();
+    }
 
     Ok(())
 }

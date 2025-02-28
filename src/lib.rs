@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use bytemuck::{Pod, Zeroable};
 use intermediate::Intermediate;
 use schedule::Schedule;
@@ -238,7 +236,7 @@ mod tests {
             c += 1;
         }
 
-        assert_eq!(c, 23);
+        assert_eq!(c, 31);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 
