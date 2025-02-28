@@ -3,7 +3,6 @@ use swiftness::swiftness_fri::ComputeNextLayerCache;
 use swiftness::swiftness_fri::FriVerifyCache;
 use swiftness::swiftness_fri::group::FRI_GROUP;
 use swiftness::swiftness_fri::layer::FriLayerComputationParams;
-use swiftness::swiftness_fri::layer::compute_next_layer;
 use swiftness::types::Felt;
 use swiftness::types::StarkProof;
 
@@ -32,25 +31,6 @@ pub struct StarkVerifyLayerContext<'a> {
 impl Task for StarkVerifyLayerTask<'_> {
     // fri_verify_layers(
     fn execute(&mut self) -> Vec<Tasks> {
-        // Original
-
-        let Self { cache, context, .. } = self;
-
-        let FriVerifyCache {
-            fri_queries,
-            next_layer_cache,
-            ..
-        } = cache;
-
-        let Some(StarkVerifyLayerContext {
-            target_layer_witness_leaves,
-            params,
-            ..
-        }) = context
-        else {
-            panic!("Not enough data in context");
-        };
-
         self.children()
     }
 

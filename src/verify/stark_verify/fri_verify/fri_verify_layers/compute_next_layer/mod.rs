@@ -1,22 +1,16 @@
-use swiftness::funvec::FunVec;
 use swiftness::swiftness_fri::ComputeNextLayerCache;
 use swiftness::swiftness_fri::FriVerifyCache;
-use swiftness::swiftness_fri::group::FRI_GROUP;
-use swiftness::swiftness_fri::layer::FriLayerComputationParams;
-use swiftness::swiftness_fri::layer::compute_next_layer;
-use swiftness::types::Felt;
+
 use swiftness::types::StarkProof;
 
 use crate::Cache;
 use crate::intermediate::Intermediate;
 use crate::task::Task;
 use crate::task::Tasks;
-use crate::verify::stark_verify::table_decommit::TableDecommitCache;
-use crate::verify::stark_verify::table_decommit::TableDecommitTarget;
-use crate::verify::stark_verify::table_decommit::TableDecommitTask;
 
-use super::layer::StarkVerifyLayerContext;
 use super::layer::StarkVerifyLayerTask;
+
+pub mod next_inner;
 
 pub struct ComputeNextTask<'a> {
     pub parent: StarkVerifyLayerTask<'a>,
@@ -27,37 +21,34 @@ impl Task for ComputeNextTask<'_> {
     fn execute(&mut self) -> Vec<Tasks> {
         // Original
 
-        let StarkVerifyLayerTask { cache, context, .. } = &mut self.parent;
+        let StarkVerifyLayerTask { cache, .. } = &mut self.parent;
 
         let FriVerifyCache {
-            fri_queries,
+            fri_queries: queries,
             next_layer_cache,
             ..
         } = cache;
 
-        let Some(StarkVerifyLayerContext {
-            target_layer_witness_leaves: sibling_witness,
-            params,
+        let ComputeNextLayerCache {
+            next_queries,
+            verify_indices,
+            verify_y_values,
             ..
-        }) = context
-        else {
-            panic!("Not enough data in context");
-        };
+        } = next_layer_cache;
 
-        // Original function.
-        compute_next_layer(
-            next_layer_cache,
-            fri_queries,
-            sibling_witness,
-            params.clone(),
-        )
-        .unwrap();
+        next_queries.flush();
+        verify_indices.flush();
+        verify_y_values.flush();
+
+        if queries.is_empty() {
+            return vec![];
+        }
 
         self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {
-        vec![]
+        vec![Tasks::ComputeNextInner(self.parent.layer_index)]
     }
 }
 

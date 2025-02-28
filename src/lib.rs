@@ -220,7 +220,7 @@ mod tests {
         let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
         let c = proof_account.flow();
 
-        assert_eq!(c, 54);
+        assert_eq!(c, 190);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 
