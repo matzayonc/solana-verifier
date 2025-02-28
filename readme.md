@@ -2,6 +2,20 @@
 
 Solana program, using Swiftness to verify Cairo proofs on the Solana blockchain.
 
+## Progress
+
+Currently proof is split into 190 tasks (instructions), most of the in the critical FRI verification stage. Tests in the `src/lib.rs` confirm success of the verification process.
+
+This is currently too much to be run in a single transaction, so the client logic will have to be updated to send multiple transactions (which is an issue since first of the transactions can be too great to be sent).
+
+Couple of commits down the line proof was split into < 30 tasks, and worked on the local validator just fine.
+
+## TODOs
+
+- [ ] Update client to send multiple transactions.
+- [ ] Further split the proof into smaller tasks, gradually lowering the limit.
+- [ ] Optimize publishing of the proof, and some of the computations.
+
 ## Overview
 
 This program is used to verify Cairo proofs on the Solana blockchain. Due to the constraints of the Solana program interface, the proof is split into multiple (hundreds) of transactions.
@@ -46,8 +60,8 @@ solana-keygen new
 Start Local Validator and set it as default endpoint
 
 ```bash
-solana-test-validator
 solana config set -u localhost
+solana-test-validator --compute-unit-limit 10000000000000
 ```
 
 ### Program Setup
