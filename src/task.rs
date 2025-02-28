@@ -39,7 +39,7 @@ pub enum Tasks {
 pub type RawTask = [u8; 4];
 
 pub trait Task {
-    fn execute(&mut self);
+    fn execute(&mut self) -> Vec<Tasks>;
     fn children(&self) -> Vec<Tasks>;
 }
 
@@ -99,7 +99,7 @@ impl TryFrom<&RawTask> for Tasks {
             1 => Tasks::VerifyProofWithoutStark,
             2 => Tasks::StarkVerify,
             3 => Tasks::VerifyOutput,
-            4 => Tasks::TableDecommit(TableDecommitTarget::try_from(tail[0])?),
+            4 => Tasks::TableDecommit(TableDecommitTarget::try_from([tail[0], tail[1]])?),
             5 => Tasks::StarkCommit,
             6 => Tasks::StarkCommitOodsCoef,
             7 => Tasks::StarkCommitFri,
@@ -121,7 +121,13 @@ impl From<Tasks> for RawTask {
             Tasks::VerifyProofWithoutStark => [1, 0, 0, 0],
             Tasks::StarkVerify => [2, 0, 0, 0],
             Tasks::VerifyOutput => [3, 0, 0, 0],
-            Tasks::TableDecommit(target) => [4, target as u8, 0, 0],
+            Tasks::TableDecommit(target) => match target {
+                TableDecommitTarget::Invalid => [4, 0, 0, 0],
+                TableDecommitTarget::Original => [4, 1, 0, 0],
+                TableDecommitTarget::Interaction => [4, 2, 0, 0],
+                TableDecommitTarget::Composition => [4, 3, 0, 0],
+                TableDecommitTarget::Fri(i) => [4, 4, i as u8, 0],
+            },
             Tasks::StarkCommit => [5, 0, 0, 0],
             Tasks::StarkCommitOodsCoef => [6, 0, 0, 0],
             Tasks::StarkCommitFri => [7, 0, 0, 0],

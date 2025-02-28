@@ -17,11 +17,13 @@ pub struct VerifyOutputTask<'a> {
 }
 
 impl Task for VerifyOutputTask<'_> {
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let (program_hash, output) = Layout::verify_public_input(self.public_input).unwrap();
 
         *self.program_hash = program_hash;
         self.output.move_to(output);
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

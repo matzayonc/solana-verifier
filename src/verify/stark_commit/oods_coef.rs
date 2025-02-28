@@ -17,7 +17,7 @@ pub struct StarkCommitOodsCoefTask<'a> {
 
 impl Task for StarkCommitOodsCoefTask<'_> {
     // stark_commit() - last part
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let StarkCommitTask {
             intermediate,
             transcript,
@@ -35,6 +35,8 @@ impl Task for StarkCommitOodsCoefTask<'_> {
             intermediate.oods_alpha,
             n as u32,
         );
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

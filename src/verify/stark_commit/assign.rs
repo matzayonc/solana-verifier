@@ -16,7 +16,7 @@ pub struct StarkCommitAssignTask<'a> {
 
 impl Task for StarkCommitAssignTask<'_> {
     // stark_commit() - last part
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let StarkCommitTask {
             result,
             cache,
@@ -53,6 +53,8 @@ impl Task for StarkCommitAssignTask<'_> {
 
         oods_values.overwrite(unsent_commitment.oods_values.as_slice());
         interaction_after_oods.overwrite(oods_coefficients);
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

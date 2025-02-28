@@ -39,7 +39,7 @@ pub struct ProofAccount {
 }
 
 impl ProofAccount {
-    pub fn fill_schedule(&mut self) {
+    pub fn flow(&mut self) {
         let ProofAccount {
             schedule,
             proof,
@@ -126,7 +126,10 @@ pub fn process_instruction(
             msg!("Schedule");
 
             let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
-            proof_account.fill_schedule();
+            proof_account.schedule.flush();
+            proof_account
+                .schedule
+                .push(Tasks::VerifyProofWithoutStark.into());
 
             VerificationStage::Verify
         }
@@ -151,12 +154,19 @@ pub fn process_instruction(
                 return Err(ProgramError::Custom(3));
             };
 
-            let task = Tasks::try_from(task)?;
+            let task = Tasks::try_from(&task)?;
             let task_name = format!("{:?}", task);
             msg!("Executing task: {}", task_name);
 
             let mut task = task.view(proof, cache, intermediate);
-            task.execute();
+            let children = task.execute();
+            schedule.push_slice(
+                &children
+                    .into_iter()
+                    .map(From::from)
+                    .rev()
+                    .collect::<Vec<_>>(),
+            );
 
             if schedule.finished() {
                 VerificationStage::Verified
@@ -214,15 +224,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_needed_tx() {
-        let account_data = &mut read_proof_from_file()[..];
-        let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
-        proof_account.fill_schedule();
-        let needed_tx = proof_account.schedule.remaining();
-        assert_eq!(needed_tx, 23);
-    }
-
-    #[test]
     fn test_deserialize_proof() {
         let account_data = &mut read_proof_from_file()[..];
 
@@ -236,7 +237,7 @@ mod tests {
             c += 1;
         }
 
-        assert_eq!(c, 31);
+        assert_eq!(c, 38);
 
         let ProofAccount { intermediate, .. } = bytemuck::from_bytes::<ProofAccount>(account_data);
 

@@ -26,7 +26,7 @@ pub struct StarkVerifyFriTask<'a> {
 
 impl Task for StarkVerifyFriTask<'_> {
     // fri_verify(
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         // Original
 
         let StarkVerifyFriTask {
@@ -53,6 +53,8 @@ impl Task for StarkVerifyFriTask<'_> {
             decommitment.values,
             decommitment.points,
         );
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

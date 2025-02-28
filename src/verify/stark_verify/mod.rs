@@ -41,7 +41,7 @@ pub struct StarkVerifyIntermediate {
 
 impl Task for StarkVerifyTask<'_> {
     // stark_verify::<Layout>(
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let StarkVerifyTask {
             cache,
             n_original_columns,
@@ -83,6 +83,8 @@ impl Task for StarkVerifyTask<'_> {
             &witness.traces_decommitment,
             &witness.composition_decommitment,
         );
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

@@ -12,7 +12,7 @@ pub struct StarkVerifyLayerAssignNextTask<'a> {
 
 impl Task for StarkVerifyLayerAssignNextTask<'_> {
     // fri_verify_layers(
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let FriVerifyCache {
             fri_queries,
             next_layer_cache,
@@ -21,6 +21,8 @@ impl Task for StarkVerifyLayerAssignNextTask<'_> {
 
         fri_queries.flush();
         fri_queries.extend(next_layer_cache.next_queries.as_slice());
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

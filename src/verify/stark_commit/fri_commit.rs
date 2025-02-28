@@ -14,7 +14,7 @@ pub struct StarkCommitFriTask<'a> {
 
 impl Task for StarkCommitFriTask<'_> {
     // stark_commit() - last part
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let StarkCommitTask {
             intermediate,
             transcript,
@@ -28,6 +28,8 @@ impl Task for StarkCommitFriTask<'_> {
             &unsent_commitment.fri,
             &config.fri,
         );
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

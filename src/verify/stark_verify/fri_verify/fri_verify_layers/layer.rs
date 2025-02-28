@@ -13,9 +13,14 @@ use crate::Cache;
 use crate::intermediate::Intermediate;
 use crate::task::Task;
 use crate::task::Tasks;
+use crate::verify::stark_verify::table_decommit::TableDecommitCache;
+use crate::verify::stark_verify::table_decommit::TableDecommitTarget;
+use crate::verify::stark_verify::table_decommit::TableDecommitTask;
 
 pub struct StarkVerifyLayerTask<'a> {
+    pub layer_index: usize,
     pub cache: &'a mut FriVerifyCache,
+    pub table_cache: &'a mut TableDecommitCache,
     pub context: Option<StarkVerifyLayerContext<'a>>,
 }
 
@@ -28,7 +33,7 @@ pub struct StarkVerifyLayerContext<'a> {
 
 impl Task for StarkVerifyLayerTask<'_> {
     // fri_verify_layers(
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         // Original
 
         let Self { cache, context, .. } = self;
@@ -75,17 +80,22 @@ impl Task for StarkVerifyLayerTask<'_> {
         }
 
         // Table decommitment.
-        let _ = table_decommit(
-            &mut cache.commitment,
-            &target_commitment,
-            verify_indices.as_slice(),
-            &decommitment,
-            &target_layer_witness_table_withness,
-        );
+        // let _ = table_decommit(
+        //     &mut cache.commitment,
+        //     &target_commitment,
+        //     verify_indices.as_slice(),
+        //     &decommitment,
+        //     &target_layer_witness_table_withness,
+        // );
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {
-        vec![Tasks::StarkVerifyLayerAssignNext]
+        vec![
+            Tasks::StarkVerifyLayerAssignNext,
+            Tasks::TableDecommit(TableDecommitTarget::Fri(self.layer_index as u8)),
+        ]
     }
 }
 
@@ -96,7 +106,8 @@ impl<'a> StarkVerifyLayerTask<'a> {
         cache: &'a mut Cache,
         intermediate: &'a mut Intermediate,
     ) -> Self {
-        let cache = &mut cache.legacy.stark.fri;
+        let Cache { legacy, table } = cache;
+        let cache = &mut legacy.stark.fri;
         let commitment = &intermediate.verify.stark_commitment.fri;
         let witness = &mut proof.witness.fri_witness;
 
@@ -134,6 +145,47 @@ impl<'a> StarkVerifyLayerTask<'a> {
             None
         };
 
-        StarkVerifyLayerTask { cache, context }
+        StarkVerifyLayerTask {
+            layer_index,
+            cache,
+            table_cache: table,
+            context,
+        }
+    }
+}
+
+impl<'a> Into<TableDecommitTask<'a>> for StarkVerifyLayerTask<'a> {
+    fn into(self) -> TableDecommitTask<'a> {
+        let StarkVerifyLayerTask {
+            cache,
+            context,
+            table_cache,
+            ..
+        } = self;
+
+        let FriVerifyCache {
+            next_layer_cache,
+            decommitment,
+            ..
+        } = cache;
+
+        let Some(StarkVerifyLayerContext {
+            target_layer_witness_table_withness,
+            target_commitment,
+            ..
+        }) = context
+        else {
+            panic!("Not enough data in context");
+        };
+
+        let ComputeNextLayerCache { verify_indices, .. } = next_layer_cache;
+
+        TableDecommitTask {
+            cache: table_cache,
+            commitment: &target_commitment,
+            queries: verify_indices.as_slice(),
+            decommitment: decommitment,
+            witness: &target_layer_witness_table_withness,
+        }
     }
 }

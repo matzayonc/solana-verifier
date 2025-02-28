@@ -19,7 +19,7 @@ pub struct GenerateQueriesTask<'a> {
 
 impl Task for GenerateQueriesTask<'_> {
     // generate_queries()
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let GenerateQueriesTask {
             queries,
             transcript,
@@ -28,6 +28,8 @@ impl Task for GenerateQueriesTask<'_> {
         } = self;
 
         queries.move_to(generate_queries(transcript, *n_samples, *query_upper_bound));
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

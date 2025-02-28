@@ -5,6 +5,7 @@ use swiftness::types::StarkProof;
 
 use crate::{Cache, intermediate::Intermediate, task::Tasks};
 
+/// A stack-like structure to store the tasks to be executed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 pub struct Schedule<T, const N: usize>
@@ -13,7 +14,6 @@ where
 {
     data: [T; N],
     top: usize,
-    finished: usize,
 }
 
 unsafe impl<T: Pod + Zeroable + Default, const N: usize> Pod for Schedule<T, N> {}
@@ -27,7 +27,6 @@ where
         Self {
             data: [T::default(); N],
             top: 0,
-            finished: 0,
         }
     }
 }
@@ -59,21 +58,16 @@ where
     }
 
     pub fn finished(&self) -> bool {
-        self.top == self.finished
+        self.top == 0
     }
 
-    pub fn next(&mut self) -> Option<&T> {
-        if self.finished >= self.top {
+    pub fn next(&mut self) -> Option<T> {
+        if self.top == 0 {
             None
         } else {
-            let value = &self.data[self.finished];
-            self.finished += 1;
-            Some(value)
+            self.top -= 1;
+            Some(self.data[self.top])
         }
-    }
-
-    pub fn next_owned(&mut self) -> Option<T> {
-        self.next().cloned()
     }
 
     pub fn push(&mut self, value: T) {
@@ -81,13 +75,13 @@ where
         self.top += 1;
     }
 
+    /// Tasks should be in the reverse order of execution.
     pub fn push_slice(&mut self, vec: &[T]) {
         self.data[self.top..self.top + vec.len()].copy_from_slice(vec);
         self.top += vec.len();
     }
 
     pub fn flush(&mut self) {
-        self.finished = 0;
         self.top = 0;
     }
 
@@ -95,11 +89,10 @@ where
         let mut stack = Self::default();
         stack.data[..vec.len()].copy_from_slice(vec);
         stack.top = vec.len();
-        stack.finished = 0;
         stack
     }
 
     pub fn remaining(&self) -> usize {
-        self.top - self.finished
+        self.top
     }
 }

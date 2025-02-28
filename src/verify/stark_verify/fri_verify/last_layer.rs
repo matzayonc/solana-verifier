@@ -17,7 +17,7 @@ pub struct StarkVerifyLastLayerTask<'a> {
 
 impl Task for StarkVerifyLastLayerTask<'_> {
     // fri_verify(
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         // Original
 
         let StarkVerifyFriTask {
@@ -38,6 +38,8 @@ impl Task for StarkVerifyLastLayerTask<'_> {
         )
         .map_err(|_| Error::LastLayerVerificationError)
         .unwrap();
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

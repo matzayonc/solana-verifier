@@ -17,7 +17,7 @@ pub struct StarkVerifyLayersTask<'a> {
 
 impl Task for StarkVerifyLayersTask<'_> {
     // fri_verify_layers(
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         // Original
 
         // let StarkVerifyFriTask {
@@ -48,6 +48,8 @@ impl Task for StarkVerifyLayersTask<'_> {
         //     eval_points,
         //     step_sizes,
         // );
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {

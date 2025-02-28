@@ -52,7 +52,7 @@ pub struct StarkCommitIntermediate {
 
 impl Task for StarkCommitTask<'_> {
     // stark_commit()
-    fn execute(&mut self) {
+    fn execute(&mut self) -> Vec<Tasks> {
         let StarkCommitTask {
             cache,
             transcript,
@@ -108,6 +108,8 @@ impl Task for StarkCommitTask<'_> {
             &stark_domains.trace_generator,
         )
         .unwrap();
+
+        self.children()
     }
 
     fn children(&self) -> Vec<Tasks> {
