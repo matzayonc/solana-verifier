@@ -45,14 +45,6 @@ impl Task for ComputeNextInnerTask<'_> {
             panic!("Not enough data in context");
         };
 
-        // Original function.
-        // compute_next_layer(
-        //     next_layer_cache,
-        //     fri_queries,
-        //     sibling_witness,
-        //     params.clone(),
-        // )
-        // .unwrap();
 
         let ComputeNextLayerCache {
             next_queries,

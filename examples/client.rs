@@ -188,15 +188,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     verify_ixs.insert(0, schedule_ix);
 
     let blockhash = client.get_latest_blockhash().await.unwrap();
-    let transactions =
-    //  verify_ixs.iter().map(|ix| {
-    [Transaction::new_signed_with_payer(&verify_ixs, Some(&payer.pubkey()), &[&payer], blockhash)];
-    // });
+    let transaction = Transaction::new_signed_with_payer(
+        &verify_ixs,
+        Some(&payer.pubkey()),
+        &[&payer],
+        blockhash,
+    );
 
-    for (i, tx) in transactions.into_iter().enumerate() {
-        println!("Sending transaction: {i}");
-        client.send_and_confirm_transaction(&tx).await.unwrap();
-    }
+    client
+        .send_and_confirm_transaction(&transaction)
+        .await
+        .unwrap();
 
     Ok(())
 }

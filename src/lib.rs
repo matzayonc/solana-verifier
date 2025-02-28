@@ -152,7 +152,7 @@ pub fn process_instruction(
             } = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
 
             let Some(task) = schedule.next() else {
-                return Err(ProgramError::Custom(3));
+                return Ok(VerificationStage::Verified);
             };
 
             let task = Tasks::try_from(&task)?;
@@ -214,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_proof() {
+    fn test_verify_proof() {
         let account_data = &mut read_proof_from_file()[..];
 
         let proof_account = bytemuck::from_bytes_mut::<ProofAccount>(account_data);
